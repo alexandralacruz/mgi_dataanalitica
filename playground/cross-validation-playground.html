@@ -1,0 +1,1507 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cross-Validation Playground — CSDS 352</title>
+    <style>
+      /* =================================================================
+         TRASH POLKA PALETTE — matches the metrics playground
+         ================================================================= */
+      :root {
+        --paper:     #efe7d4;
+        --paper-2:   #e8dfc8;
+        --ink:       #0b0b0b;
+        --ink-soft:  #2a2824;
+        --muted:     #6b6558;
+        --line:      #0b0b0b;
+        --line-soft: rgba(11,11,11,0.18);
+        --red:       #c8102e;
+        --red-deep:  #8a0a1f;
+        --red-soft:  rgba(200,16,46,0.12);
+
+        --stack-display: "Impact", "Haettenschweiler", "Arial Narrow Bold",
+                         "Oswald", system-ui, sans-serif;
+        --stack-serif:   "Georgia", "Times New Roman", "Iowan Old Style", serif;
+        --stack-mono:    "Courier New", ui-monospace, "Roboto Mono", monospace;
+        --stack-ui:      system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+
+      body {
+        font-family: var(--stack-serif);
+        color: var(--ink);
+        font-size: 14px;
+        line-height: 1.55;
+        background:
+          radial-gradient(1200px 600px at 15% -10%, rgba(200,16,46,0.05), transparent 60%),
+          radial-gradient(900px 500px at 110% 20%, rgba(11,11,11,0.04), transparent 60%),
+          var(--paper);
+        min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.04 0 0 0 0 0.04 0 0 0 0 0.04 0 0 0 0.25 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/></svg>");
+        opacity: 0.45;
+        mix-blend-mode: multiply;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* ============================== HEADER ============================== */
+      header {
+        position: relative;
+        background: var(--ink);
+        color: var(--paper);
+        padding: 34px 40px 40px;
+        overflow: hidden;
+        border-bottom: 6px solid var(--red);
+      }
+      header::before {
+        content: "";
+        position: absolute;
+        left: -40px; right: -40px; top: 58%;
+        height: 22px;
+        background: var(--red);
+        transform: rotate(-2.5deg);
+        opacity: 0.95;
+      }
+      header::after {
+        content: "";
+        position: absolute;
+        right: 20px; top: 10px; width: 220px; height: 180px;
+        background:
+          radial-gradient(10px 10px at 20% 30%, var(--red) 99%, transparent 100%),
+          radial-gradient(4px 4px at 60% 20%, var(--red) 99%, transparent 100%),
+          radial-gradient(14px 8px at 80% 60%, var(--red) 99%, transparent 100%),
+          radial-gradient(3px 3px at 40% 70%, var(--red) 99%, transparent 100%),
+          radial-gradient(6px 6px at 70% 90%, var(--red) 99%, transparent 100%),
+          radial-gradient(2px 2px at 30% 50%, var(--red) 99%, transparent 100%);
+        opacity: 0.85;
+        pointer-events: none;
+        transform: rotate(8deg);
+      }
+      header h1 {
+        margin: 0 0 6px;
+        font-family: var(--stack-display);
+        font-size: 44px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        line-height: 0.95;
+        position: relative;
+        z-index: 2;
+      }
+      header h1 .red { color: var(--red); }
+      header h1 .slash { color: var(--red); font-weight: 100; margin: 0 6px; }
+      header .sub {
+        font-family: var(--stack-mono);
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.85;
+        position: relative;
+        z-index: 2;
+      }
+      header .stamp {
+        position: absolute;
+        right: 40px; top: 38px;
+        font-family: var(--stack-mono);
+        color: var(--paper);
+        border: 3px solid var(--paper);
+        padding: 6px 14px;
+        transform: rotate(6deg);
+        letter-spacing: 0.12em;
+        font-size: 11px;
+        opacity: 0.85;
+        z-index: 3;
+      }
+
+      /* ============================== TABS ============================== */
+      .tabs {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        gap: 0;
+        padding: 0 24px;
+        background: var(--paper);
+        border-bottom: 3px solid var(--ink);
+        overflow-x: auto;
+      }
+      .tab {
+        appearance: none;
+        border: none;
+        background: transparent;
+        padding: 16px 22px 14px;
+        font-family: var(--stack-display);
+        font-size: 18px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink);
+        cursor: pointer;
+        position: relative;
+        white-space: nowrap;
+        margin-bottom: -3px;
+        border-bottom: 5px solid transparent;
+        transition: border-color 0.15s, color 0.15s;
+      }
+      .tab:hover { color: var(--red); }
+      .tab.active {
+        border-bottom-color: var(--red);
+        color: var(--ink);
+      }
+      .tab .num {
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        color: var(--red);
+        margin-right: 8px;
+        letter-spacing: 0.1em;
+      }
+
+      /* ============================== LAYOUT ============================== */
+      main {
+        position: relative;
+        z-index: 1;
+        padding: 28px 32px 60px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .view { display: none; }
+      .view.active { display: block; }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 390px;
+        gap: 22px;
+      }
+      @media (max-width: 1040px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+
+      /* ============================== PANEL ============================== */
+      .panel {
+        position: relative;
+        background: var(--paper-2);
+        border: 2.5px solid var(--ink);
+        padding: 18px 18px 16px;
+        box-shadow: 4px 4px 0 var(--ink);
+      }
+      .panel + .panel { margin-top: 18px; }
+      .panel.tilt-1 { transform: rotate(-0.35deg); }
+      .panel.tilt-2 { transform: rotate(0.3deg); }
+
+      .panel h2 {
+        font-family: var(--stack-display);
+        font-size: 22px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin: 0 0 6px;
+        display: inline-block;
+        padding: 2px 10px 0;
+        background: var(--ink);
+        color: var(--paper);
+        transform: rotate(-0.6deg);
+      }
+      .panel h2 .red { color: var(--red); }
+      .panel h2::before {
+        content: "● ";
+        color: var(--red);
+        font-size: 14px;
+        vertical-align: middle;
+      }
+
+      .hint {
+        font-family: var(--stack-mono);
+        color: var(--muted);
+        font-size: 11.5px;
+        letter-spacing: 0.02em;
+        margin: 6px 0 12px;
+        border-left: 3px solid var(--red);
+        padding-left: 10px;
+      }
+      .hint b { color: var(--ink); background: var(--red-soft); padding: 0 3px; }
+
+      /* ============================== CONTROLS ============================== */
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .btn {
+        appearance: none;
+        border: 2px solid var(--ink);
+        background: var(--paper);
+        padding: 8px 14px;
+        font-family: var(--stack-display);
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink);
+        cursor: pointer;
+        box-shadow: 3px 3px 0 var(--ink);
+        transition: transform 0.08s, box-shadow 0.08s, background 0.15s;
+      }
+      .btn:hover { background: var(--paper-2); }
+      .btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+      .btn.primary {
+        background: var(--red);
+        color: var(--paper);
+        border-color: var(--ink);
+      }
+      .btn.primary:hover { background: var(--red-deep); }
+      .btn.ghost {
+        background: transparent;
+        box-shadow: none;
+        border-style: dashed;
+      }
+      .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+      .preset-row { display: flex; flex-wrap: wrap; gap: 6px; }
+      .chip {
+        appearance: none;
+        background: var(--paper);
+        color: var(--ink);
+        border: 1.5px solid var(--ink);
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 5px 10px;
+        cursor: pointer;
+        transition: background 0.12s;
+      }
+      .chip:hover { background: var(--ink); color: var(--paper); }
+      .chip.red { background: var(--red); color: var(--paper); border-color: var(--red); }
+      .chip.red:hover { background: var(--red-deep); border-color: var(--red-deep); }
+      .chip.active { background: var(--ink); color: var(--paper); }
+
+      .control { margin-bottom: 14px; }
+      .control label {
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink);
+        margin-bottom: 4px;
+      }
+      .control label .value {
+        background: var(--ink);
+        color: var(--paper);
+        padding: 1px 7px;
+        font-variant-numeric: tabular-nums;
+      }
+      .control input[type="range"] {
+        width: 100%;
+        accent-color: var(--red);
+      }
+      .checkbox-row {
+        display: flex; flex-wrap: wrap; gap: 14px;
+        margin-bottom: 10px;
+      }
+      .checkbox-row label {
+        display: flex; align-items: center; gap: 6px;
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+      .checkbox-row input { accent-color: var(--red); }
+
+      /* ============================== PLOTS ============================== */
+      svg.plot {
+        width: 100%;
+        height: auto;
+        display: block;
+        background: var(--paper);
+        border: 2px solid var(--ink);
+        touch-action: none;
+        user-select: none;
+      }
+      .legend {
+        display: flex; flex-wrap: wrap; gap: 14px;
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        color: var(--ink);
+        margin-top: 10px;
+        letter-spacing: 0.02em;
+      }
+      .legend .sw { display: inline-flex; align-items: center; gap: 6px; }
+      .legend .dot {
+        display: inline-block;
+        width: 12px; height: 12px;
+        border: 2px solid var(--ink);
+      }
+      .legend .dot.round { border-radius: 50%; }
+
+      /* ============================== METRICS ============================== */
+      .metrics {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .metric {
+        position: relative;
+        border: 2px solid var(--ink);
+        background: var(--paper);
+        padding: 12px 12px 14px;
+        box-shadow: 3px 3px 0 var(--ink);
+      }
+      .metric.tilt-a { transform: rotate(-0.8deg); }
+      .metric.tilt-b { transform: rotate(0.6deg); }
+      .metric.tilt-c { transform: rotate(-0.4deg); }
+      .metric.tilt-d { transform: rotate(0.9deg); }
+      .metric .name {
+        font-family: var(--stack-display);
+        font-size: 14px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ink);
+      }
+      .metric .val {
+        font-family: var(--stack-mono);
+        font-weight: 700;
+        font-size: 26px;
+        font-variant-numeric: tabular-nums;
+        margin-top: 2px;
+        color: var(--ink);
+      }
+      .metric .bar {
+        height: 6px;
+        background: var(--ink);
+        margin-top: 8px;
+        position: relative;
+        overflow: hidden;
+      }
+      .metric .bar > div {
+        height: 100%;
+        background: var(--red);
+        transition: width 0.18s;
+      }
+      .metric.red .val { color: var(--red); }
+      .metric.red .bar > div { background: var(--ink); }
+      .metric.red .bar { background: var(--red); }
+      .metric .sub {
+        font-family: var(--stack-mono);
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 4px;
+        letter-spacing: 0.04em;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        gap: 8px;
+      }
+      .stat-cell {
+        border: 1.5px solid var(--ink);
+        background: var(--paper);
+        padding: 8px 10px;
+        text-align: center;
+      }
+      .stat-cell .lbl {
+        font-family: var(--stack-display);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+      .stat-cell .val {
+        font-family: var(--stack-mono);
+        font-weight: 700;
+        font-size: 16px;
+        font-variant-numeric: tabular-nums;
+        color: var(--ink);
+      }
+
+      .insight {
+        margin-top: 12px;
+        padding: 12px 14px;
+        background: var(--ink);
+        color: var(--paper);
+        font-family: var(--stack-serif);
+        font-size: 13px;
+        line-height: 1.55;
+        border-left: 6px solid var(--red);
+        position: relative;
+      }
+      .insight::before {
+        content: "//";
+        color: var(--red);
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        margin-right: 6px;
+      }
+      .insight b { color: var(--red); font-weight: 700; }
+
+      .section-title {
+        margin: 20px 0 10px;
+        font-family: var(--stack-display);
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--ink);
+        border-bottom: 2px solid var(--ink);
+        padding-bottom: 2px;
+      }
+
+      .formula {
+        font-family: var(--stack-mono);
+        font-size: 13px;
+        color: var(--ink);
+        padding: 10px 12px;
+        background: var(--paper);
+        border: 1.5px solid var(--ink);
+        border-left: 6px solid var(--red);
+        margin-top: 8px;
+        overflow-x: auto;
+      }
+      .formula .lbl {
+        display: inline-block;
+        font-family: var(--stack-display);
+        background: var(--ink);
+        color: var(--paper);
+        padding: 1px 6px;
+        margin-right: 8px;
+        letter-spacing: 0.08em;
+      }
+
+      footer {
+        text-align: center;
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        padding: 20px;
+      }
+
+      .cross-link {
+        text-align: center;
+        margin: 24px 0 0;
+        font-family: var(--stack-mono);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+      }
+      .cross-link a {
+        color: var(--ink);
+        background: var(--red);
+        color: var(--paper);
+        padding: 4px 10px;
+        text-decoration: none;
+        border: 2px solid var(--ink);
+      }
+      .cross-link a:hover { background: var(--red-deep); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Cross <span class="red">Validation</span> <span class="slash">/</span> Playground</h1>
+      <div class="sub">CSDS 352 · Week 7 · Robust model evaluation</div>
+      <div class="stamp">CONFIDENTIAL · WK-7</div>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-view="luck"><span class="num">01</span>Luck of the Split</button>
+      <button class="tab" data-view="kfold"><span class="num">02</span>K-Fold Rescue</button>
+    </nav>
+
+    <main>
+      <!-- ============================== TAB 1 — LUCK ============================== -->
+      <section id="view-luck" class="view active">
+        <div class="grid">
+          <div>
+            <div class="panel tilt-1">
+              <h2>Train / <span class="red">Test</span> split</h2>
+              <p class="hint">
+                Same dataset, same model, same procedure — only the <b>split</b>
+                changes. Press <b>Re-roll split</b> and watch the test score
+                jump around.
+              </p>
+              <svg id="luck-plot" class="plot" viewBox="0 0 720 420"></svg>
+              <div class="legend">
+                <span class="sw"><span class="dot round" style="background:var(--ink)"></span> train (used to fit)</span>
+                <span class="sw"><span class="dot round" style="background:var(--paper);border-color:var(--red)"></span> test (held out)</span>
+                <span class="sw"><span class="dot" style="background:var(--ink)"></span> fitted line (OLS on train)</span>
+                <span class="sw"><span class="dot" style="background:repeating-linear-gradient(45deg,var(--red) 0 3px,transparent 3px 6px);border-color:var(--red)"></span> test residual</span>
+              </div>
+            </div>
+
+            <div class="panel tilt-2">
+              <h2>Histogram of <span class="red">test R²</span> over rolls</h2>
+              <p class="hint">
+                Every time you re-roll the split, we record the test R². After
+                a few rolls the <b>spread</b> of possible answers becomes
+                undeniable.
+              </p>
+              <svg id="luck-hist" class="plot" viewBox="0 0 720 240"></svg>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel tilt-2">
+              <h2>Controls</h2>
+              <div class="control">
+                <label>Test fraction <span class="value" id="luck-tf-val">0.30</span></label>
+                <input id="luck-tf" type="range" min="0.1" max="0.5" step="0.01" value="0.3" />
+              </div>
+              <div class="control">
+                <label>Noise σ <span class="value" id="luck-noise-val">1.20</span></label>
+                <input id="luck-noise" type="range" min="0" max="3" step="0.05" value="1.2" />
+              </div>
+              <div class="control">
+                <label>Sample count n <span class="value" id="luck-n-val">30</span></label>
+                <input id="luck-n" type="range" min="12" max="80" step="1" value="30" />
+              </div>
+              <div class="toolbar">
+                <button class="btn primary" id="luck-roll">Re-roll split</button>
+                <button class="btn" id="luck-roll-100">Roll ×100</button>
+              </div>
+              <div class="toolbar">
+                <button class="btn" id="luck-regen">New dataset</button>
+                <button class="btn ghost" id="luck-clear">Clear history</button>
+              </div>
+            </div>
+
+            <div class="panel tilt-1">
+              <h2>This <span class="red">split</span></h2>
+              <div class="metrics">
+                <div class="metric tilt-a" id="luck-m-train">
+                  <div class="name">Train R²</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+                <div class="metric red tilt-b" id="luck-m-test">
+                  <div class="name">Test R²</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel tilt-2">
+              <h2>Roll <span class="red">history</span></h2>
+              <div class="stats-grid">
+                <div class="stat-cell">
+                  <div class="lbl">Rolls</div>
+                  <div class="val" id="luck-s-n">0</div>
+                </div>
+                <div class="stat-cell">
+                  <div class="lbl">Mean</div>
+                  <div class="val" id="luck-s-mean">—</div>
+                </div>
+                <div class="stat-cell">
+                  <div class="lbl">Std</div>
+                  <div class="val" id="luck-s-std">—</div>
+                </div>
+                <div class="stat-cell">
+                  <div class="lbl">Range</div>
+                  <div class="val" id="luck-s-range">—</div>
+                </div>
+              </div>
+              <div class="insight" id="luck-insight">
+                Roll the split a few times to see how wildly the test score
+                can swing on the <b>same model and same data</b>.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================== TAB 2 — K-FOLD ============================== -->
+      <section id="view-kfold" class="view">
+        <div class="grid">
+          <div>
+            <div class="panel tilt-1">
+              <h2>Fold <span class="red">inspector</span></h2>
+              <p class="hint">
+                Currently showing fold <b id="kf-active-num">1</b> of
+                <b id="kf-k-show">5</b>. Training on the black points, testing
+                on the red ones. Use ◀ ▶ or click a row below to switch folds.
+              </p>
+              <svg id="kf-plot" class="plot" viewBox="0 0 720 400"></svg>
+              <div class="legend">
+                <span class="sw"><span class="dot round" style="background:var(--ink)"></span> train (k−1 folds)</span>
+                <span class="sw"><span class="dot round" style="background:var(--paper);border-color:var(--red)"></span> validation (this fold)</span>
+                <span class="sw"><span class="dot" style="background:var(--ink)"></span> fit on training</span>
+              </div>
+            </div>
+
+            <div class="panel tilt-2">
+              <h2>Fold <span class="red">schedule</span></h2>
+              <p class="hint">
+                Each row is one fold. Red cells are that fold's validation
+                samples; black cells are its training samples. Every sample is
+                validated <b>exactly once</b>.
+              </p>
+              <svg id="kf-matrix" class="plot" viewBox="0 0 720 280"></svg>
+              <div class="legend">
+                <span class="sw"><span class="dot" style="background:var(--ink)"></span> training cell</span>
+                <span class="sw"><span class="dot" style="background:var(--red);border-color:var(--red)"></span> validation cell</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel tilt-2">
+              <h2>Controls</h2>
+              <div class="control">
+                <label>k (number of folds) <span class="value" id="kf-k-val">5</span></label>
+                <input id="kf-k" type="range" min="2" max="15" step="1" value="5" />
+              </div>
+              <div class="toolbar">
+                <button class="btn primary" id="kf-run">Run k-fold CV</button>
+                <button class="btn" id="kf-reshuffle">Re-shuffle &amp; run</button>
+              </div>
+              <div class="toolbar">
+                <button class="btn" id="kf-prev">◀ Prev fold</button>
+                <button class="btn" id="kf-next">Next fold ▶</button>
+              </div>
+              <div class="section-title">Quick k</div>
+              <div class="preset-row">
+                <button class="chip" data-kf-k="2">k = 2</button>
+                <button class="chip" data-kf-k="5">k = 5</button>
+                <button class="chip" data-kf-k="10">k = 10</button>
+                <button class="chip red" id="kf-loo">Leave-one-out</button>
+              </div>
+            </div>
+
+            <div class="panel tilt-1">
+              <h2>Per-fold <span class="red">R²</span></h2>
+              <svg id="kf-bars" class="plot" viewBox="0 0 720 260" style="background:var(--paper-2);border:none"></svg>
+              <div class="metrics" style="margin-top:10px">
+                <div class="metric tilt-a" id="kf-m-mean">
+                  <div class="name">Mean R²</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+                <div class="metric red tilt-b" id="kf-m-std">
+                  <div class="name">Std (folds)</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel tilt-2">
+              <h2>Stability <span class="red">showdown</span></h2>
+              <p class="hint">
+                Re-running the experiment 100× on this dataset. How noisy is
+                the <b>final number</b> you'd report?
+              </p>
+              <div class="stats-grid" style="grid-template-columns:1fr 1fr">
+                <div class="stat-cell">
+                  <div class="lbl">Single-split std</div>
+                  <div class="val" id="kf-s-single">—</div>
+                </div>
+                <div class="stat-cell">
+                  <div class="lbl">K-fold-avg std</div>
+                  <div class="val" id="kf-s-kfold">—</div>
+                </div>
+              </div>
+              <div class="insight" id="kf-insight">
+                Run k-fold to compare the variability of a single random split
+                against the k-fold average.
+              </div>
+            </div>
+
+            <div class="panel tilt-1">
+              <h2>Formulas</h2>
+              <div class="formula"><span class="lbl">CV</span>R²ᴄᴠ = (1/k) · Σ R²_fold(i)</div>
+              <div class="formula"><span class="lbl">SD</span>σ_folds = √( (1/k) · Σ (R²ᵢ − R²ᴄᴠ)² )</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cross-link">
+          <a href="metrics-playground.html">↩ Back to Metrics Playground</a>
+        </div>
+      </section>
+    </main>
+
+    <footer>CSDS 352 · DATA SCIENCE &amp; MACHINE LEARNING · WEEK 7 · CROSS-VALIDATION</footer>
+
+    <script>
+      // --------------------------- HELPERS ---------------------------
+      const fmt = (v, d = 3) => (Number.isFinite(v) ? v.toFixed(d) : "—");
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+      function tabs() {
+        document.querySelectorAll(".tab").forEach((t) => {
+          t.addEventListener("click", () => {
+            document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+            document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+            t.classList.add("active");
+            document.getElementById("view-" + t.dataset.view).classList.add("active");
+          });
+        });
+      }
+      tabs();
+
+      // Fisher–Yates shuffle (returns a new array)
+      function shuffled(arr) {
+        const a = arr.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
+      // Ordinary least squares regression, returns {m, b}
+      function ols(pts) {
+        if (pts.length < 2) return { m: 0, b: 0 };
+        const n = pts.length;
+        const mx = pts.reduce((a, p) => a + p.x, 0) / n;
+        const my = pts.reduce((a, p) => a + p.y, 0) / n;
+        let num = 0, den = 0;
+        for (const p of pts) {
+          num += (p.x - mx) * (p.y - my);
+          den += (p.x - mx) * (p.x - mx);
+        }
+        if (den === 0) return { m: 0, b: my };
+        const m = num / den;
+        return { m, b: my - m * mx };
+      }
+
+      // R² of a linear model on a set of points
+      function r2(pts, model) {
+        if (pts.length < 2) return NaN;
+        const my = pts.reduce((a, p) => a + p.y, 0) / pts.length;
+        let sse = 0, sst = 0;
+        for (const p of pts) {
+          const yh = model.m * p.x + model.b;
+          sse += (p.y - yh) * (p.y - yh);
+          sst += (p.y - my) * (p.y - my);
+        }
+        if (sst === 0) return NaN;
+        return 1 - sse / sst;
+      }
+
+      function mean(arr) {
+        return arr.length ? arr.reduce((a, v) => a + v, 0) / arr.length : NaN;
+      }
+      function std(arr) {
+        if (arr.length < 2) return NaN;
+        const m = mean(arr);
+        const v = arr.reduce((a, x) => a + (x - m) * (x - m), 0) / arr.length;
+        return Math.sqrt(v);
+      }
+
+      // =====================================================================
+      // SHARED DATASET
+      // =====================================================================
+      const DATASET = {
+        points: [],
+        n: 30,
+        noise: 1.2,
+        trueM: 0.6,
+        trueB: 2,
+        // domain
+        XMIN: 0, XMAX: 10, YMIN: 0, YMAX: 10,
+
+        generate() {
+          this.points = [];
+          for (let i = 0; i < this.n; i++) {
+            // even x's with a little jitter
+            const x = ((i + 0.5) / this.n) * (this.XMAX - this.XMIN) + this.XMIN
+                    + (Math.random() - 0.5) * 0.3;
+            // box-muller for gaussian noise
+            const u = 1 - Math.random(), v = 1 - Math.random();
+            const g = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+            const y = this.trueM * x + this.trueB + g * this.noise;
+            this.points.push({
+              id: i,
+              x: clamp(x, this.XMIN, this.XMAX),
+              y: clamp(y, this.YMIN - 2, this.YMAX + 2),
+            });
+          }
+        },
+      };
+      DATASET.generate();
+
+      // =====================================================================
+      // TAB 1 — LUCK OF THE SPLIT
+      // =====================================================================
+      const LUCK = (() => {
+        const svg = document.getElementById("luck-plot");
+        const hist = document.getElementById("luck-hist");
+
+        const W = 720, H = 420;
+        const M = { l: 48, r: 20, t: 18, b: 38 };
+        const PW = W - M.l - M.r;
+        const PH = H - M.t - M.b;
+
+        const xToPx = (x) => M.l + ((x - DATASET.XMIN) / (DATASET.XMAX - DATASET.XMIN)) * PW;
+        const yToPx = (y) => {
+          const ymin = DATASET.YMIN - 2, ymax = DATASET.YMAX + 2;
+          return M.t + PH - ((y - ymin) / (ymax - ymin)) * PH;
+        };
+
+        // state
+        let testFraction = 0.3;
+        let split = { train: [], test: [] };
+        let history = []; // array of test R² values
+
+        // controls
+        const tfEl = document.getElementById("luck-tf");
+        const tfValEl = document.getElementById("luck-tf-val");
+        const noiseEl = document.getElementById("luck-noise");
+        const noiseValEl = document.getElementById("luck-noise-val");
+        const nEl = document.getElementById("luck-n");
+        const nValEl = document.getElementById("luck-n-val");
+
+        function doSplit() {
+          const arr = shuffled(DATASET.points);
+          const tn = Math.max(2, Math.round(arr.length * testFraction));
+          split.test = arr.slice(0, tn);
+          split.train = arr.slice(tn);
+        }
+
+        function compute() {
+          if (split.train.length < 2 || split.test.length < 2) {
+            return { model: { m: 0, b: 0 }, trainR2: NaN, testR2: NaN };
+          }
+          const model = ols(split.train);
+          const trainR2 = r2(split.train, model);
+          const testR2 = r2(split.test, model);
+          return { model, trainR2, testR2 };
+        }
+
+        function renderPlot() {
+          const { model, trainR2, testR2 } = compute();
+          const parts = [];
+
+          // grid
+          parts.push('<g stroke="rgba(11,11,11,0.10)" stroke-width="1">');
+          for (let x = DATASET.XMIN; x <= DATASET.XMAX; x++) {
+            parts.push(`<line x1="${xToPx(x)}" y1="${M.t}" x2="${xToPx(x)}" y2="${M.t + PH}"/>`);
+          }
+          const ymin = DATASET.YMIN - 2, ymax = DATASET.YMAX + 2;
+          for (let y = Math.ceil(ymin); y <= Math.floor(ymax); y += 2) {
+            parts.push(`<line x1="${M.l}" y1="${yToPx(y)}" x2="${M.l + PW}" y2="${yToPx(y)}"/>`);
+          }
+          parts.push("</g>");
+
+          // axes
+          parts.push(`<g stroke="#0b0b0b" stroke-width="2" fill="none">
+            <line x1="${M.l}" y1="${M.t + PH}" x2="${M.l + PW}" y2="${M.t + PH}"/>
+            <line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t + PH}"/>
+          </g>`);
+          parts.push('<g font-family="Courier New, monospace" font-size="10" fill="#0b0b0b" text-anchor="middle">');
+          for (let x = DATASET.XMIN; x <= DATASET.XMAX; x++) parts.push(`<text x="${xToPx(x)}" y="${M.t + PH + 14}">${x}</text>`);
+          parts.push("</g>");
+          parts.push('<g font-family="Courier New, monospace" font-size="10" fill="#0b0b0b" text-anchor="end">');
+          for (let y = Math.ceil(ymin); y <= Math.floor(ymax); y += 2) parts.push(`<text x="${M.l - 6}" y="${yToPx(y) + 3}">${y}</text>`);
+          parts.push("</g>");
+
+          // fitted line — intersect with plot window
+          if (split.train.length >= 2) {
+            const yAtMin = model.m * DATASET.XMIN + model.b;
+            const yAtMax = model.m * DATASET.XMAX + model.b;
+            parts.push(`<line x1="${xToPx(DATASET.XMIN)}" y1="${yToPx(yAtMin)}" x2="${xToPx(DATASET.XMAX)}" y2="${yToPx(yAtMax)}" stroke="#0b0b0b" stroke-width="3"/>`);
+          }
+
+          // residuals for test points
+          for (const p of split.test) {
+            const yh = model.m * p.x + model.b;
+            parts.push(`<line x1="${xToPx(p.x)}" y1="${yToPx(p.y)}" x2="${xToPx(p.x)}" y2="${yToPx(yh)}" stroke="#c8102e" stroke-width="2" stroke-dasharray="3 3"/>`);
+          }
+
+          // train points
+          for (const p of split.train) {
+            parts.push(`<circle cx="${xToPx(p.x)}" cy="${yToPx(p.y)}" r="5.5" fill="#0b0b0b" stroke="#efe7d4" stroke-width="2"/>`);
+          }
+          // test points (hollow red)
+          for (const p of split.test) {
+            parts.push(`<circle cx="${xToPx(p.x)}" cy="${yToPx(p.y)}" r="6" fill="#efe7d4" stroke="#c8102e" stroke-width="3"/>`);
+          }
+
+          // corner stamps for R²
+          parts.push(`<g font-family="Impact, sans-serif" letter-spacing="1">
+            <text x="${M.l + 10}" y="${M.t + 18}" font-size="13" fill="#0b0b0b">TRAIN R² = ${fmt(trainR2, 3)}</text>
+            <text x="${M.l + PW - 10}" y="${M.t + 18}" font-size="13" fill="#c8102e" text-anchor="end">TEST R² = ${fmt(testR2, 3)}</text>
+          </g>`);
+
+          svg.innerHTML = parts.join("");
+
+          // metric cards
+          setMetric("luck-m-train", trainR2);
+          setMetric("luck-m-test", testR2);
+        }
+
+        function setMetric(id, v) {
+          const el = document.getElementById(id);
+          el.querySelector(".val").textContent = fmt(v, 3);
+          el.querySelector(".bar > div").style.width = (clamp(v || 0, 0, 1) * 100).toFixed(1) + "%";
+        }
+
+        // ---------- histogram ----------
+        function renderHist() {
+          const HW = 720, HH = 240;
+          const HM = { l: 48, r: 20, t: 22, b: 38 };
+          const HPW = HW - HM.l - HM.r;
+          const HPH = HH - HM.t - HM.b;
+
+          // x range for the histogram — include some negative for bad splits
+          const XL = -0.5, XR = 1.0;
+          const BINS = 30;
+          const step = (XR - XL) / BINS;
+          const counts = new Array(BINS).fill(0);
+          for (const v of history) {
+            if (!Number.isFinite(v)) continue;
+            const vv = clamp(v, XL, XR - 1e-6);
+            const bi = Math.floor((vv - XL) / step);
+            counts[bi]++;
+          }
+          const maxC = Math.max(1, ...counts);
+
+          const hToX = (v) => HM.l + ((v - XL) / (XR - XL)) * HPW;
+
+          const parts = [];
+
+          // grid
+          parts.push('<g stroke="rgba(11,11,11,0.10)" stroke-width="1">');
+          for (let v = XL; v <= XR + 0.001; v += 0.25) {
+            parts.push(`<line x1="${hToX(v)}" y1="${HM.t}" x2="${hToX(v)}" y2="${HM.t + HPH}"/>`);
+          }
+          parts.push("</g>");
+
+          // baseline axis
+          parts.push(`<line x1="${HM.l}" y1="${HM.t + HPH}" x2="${HM.l + HPW}" y2="${HM.t + HPH}" stroke="#0b0b0b" stroke-width="2"/>`);
+
+          // bars
+          for (let i = 0; i < BINS; i++) {
+            const c = counts[i];
+            if (c === 0) continue;
+            const h = (c / maxC) * (HPH - 6);
+            const x = hToX(XL + i * step) + 1;
+            const w = Math.max(1, HPW / BINS - 2);
+            parts.push(`<rect x="${x}" y="${HM.t + HPH - h}" width="${w}" height="${h}" fill="#c8102e" stroke="#0b0b0b" stroke-width="1"/>`);
+          }
+
+          // zero line
+          const zx = hToX(0);
+          parts.push(`<line x1="${zx}" y1="${HM.t}" x2="${zx}" y2="${HM.t + HPH}" stroke="#0b0b0b" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.55"/>`);
+          parts.push(`<text x="${zx + 4}" y="${HM.t + 14}" font-family="Courier New, monospace" font-size="10" fill="#0b0b0b">R²=0 (baseline)</text>`);
+
+          // labels
+          parts.push('<g font-family="Courier New, monospace" font-size="10" fill="#0b0b0b" text-anchor="middle">');
+          for (let v = XL; v <= XR + 0.001; v += 0.25) {
+            parts.push(`<text x="${hToX(v)}" y="${HM.t + HPH + 14}">${v.toFixed(2)}</text>`);
+          }
+          parts.push("</g>");
+          parts.push(`<text x="${HM.l + HPW / 2}" y="${HH - 6}" font-family="Impact, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" letter-spacing="1">TEST R²</text>`);
+
+          // mean & ± std marks
+          const m = mean(history), s = std(history);
+          if (Number.isFinite(m)) {
+            const mx = hToX(clamp(m, XL, XR));
+            parts.push(`<line x1="${mx}" y1="${HM.t - 6}" x2="${mx}" y2="${HM.t + HPH}" stroke="#0b0b0b" stroke-width="2.5"/>`);
+            parts.push(`<text x="${mx}" y="${HM.t - 9}" font-family="Impact, sans-serif" font-size="12" fill="#0b0b0b" text-anchor="middle" letter-spacing="1">MEAN ${m.toFixed(3)}</text>`);
+            if (Number.isFinite(s)) {
+              const l = hToX(clamp(m - s, XL, XR));
+              const r = hToX(clamp(m + s, XL, XR));
+              parts.push(`<line x1="${l}" y1="${HM.t + 6}" x2="${r}" y2="${HM.t + 6}" stroke="#c8102e" stroke-width="4"/>`);
+              parts.push(`<line x1="${l}" y1="${HM.t + 2}" x2="${l}" y2="${HM.t + 10}" stroke="#c8102e" stroke-width="2"/>`);
+              parts.push(`<line x1="${r}" y1="${HM.t + 2}" x2="${r}" y2="${HM.t + 10}" stroke="#c8102e" stroke-width="2"/>`);
+              parts.push(`<text x="${(l + r) / 2}" y="${HM.t + 20}" font-family="Courier New, monospace" font-size="10" fill="#c8102e" text-anchor="middle">± σ = ${s.toFixed(3)}</text>`);
+            }
+          }
+
+          hist.innerHTML = parts.join("");
+        }
+
+        // ---------- history / stats ----------
+        function renderStats() {
+          const n = history.length;
+          const m = mean(history);
+          const s = std(history);
+          const mn = n ? Math.min(...history) : NaN;
+          const mx = n ? Math.max(...history) : NaN;
+          document.getElementById("luck-s-n").textContent = n;
+          document.getElementById("luck-s-mean").textContent = fmt(m, 3);
+          document.getElementById("luck-s-std").textContent = fmt(s, 3);
+          document.getElementById("luck-s-range").textContent = n
+            ? `${fmt(mn, 2)}…${fmt(mx, 2)}`
+            : "—";
+
+          const ins = document.getElementById("luck-insight");
+          if (n === 0) {
+            ins.innerHTML = "Roll the split a few times to see how wildly the test score can swing on the <b>same model and same data</b>.";
+          } else if (n < 5) {
+            ins.innerHTML = `You've rolled <b>${n}</b> splits. Keep going — or press <b>Roll ×100</b> to see the full distribution.`;
+          } else {
+            const spread = mx - mn;
+            if (spread > 0.3) {
+              ins.innerHTML = `Across <b>${n}</b> splits, test R² spans <b>${mn.toFixed(2)} → ${mx.toFixed(2)}</b> (Δ = ${spread.toFixed(2)}). Reporting a single number from one split would be <b>deeply misleading</b>.`;
+            } else if (spread > 0.1) {
+              ins.innerHTML = `Spread = ${spread.toFixed(2)} across <b>${n}</b> rolls. Not catastrophic, but the "true" test score still has uncertainty — and a single split picks one point from this distribution.`;
+            } else {
+              ins.innerHTML = `Spread is small (Δ = ${spread.toFixed(2)}). Either the data is easy, σ is low, or n is large. Try <b>more noise</b> or <b>fewer samples</b> to expose the problem.`;
+            }
+          }
+        }
+
+        function roll() {
+          doSplit();
+          const { testR2 } = compute();
+          if (Number.isFinite(testR2)) history.push(testR2);
+          renderPlot();
+          renderHist();
+          renderStats();
+        }
+
+        function rollMany(k) {
+          for (let i = 0; i < k; i++) {
+            doSplit();
+            const { testR2 } = compute();
+            if (Number.isFinite(testR2)) history.push(testR2);
+          }
+          renderPlot();
+          renderHist();
+          renderStats();
+        }
+
+        // ---------- control bindings ----------
+        tfEl.addEventListener("input", () => {
+          testFraction = +tfEl.value;
+          tfValEl.textContent = testFraction.toFixed(2);
+          doSplit();
+          history = [];
+          renderPlot();
+          renderHist();
+          renderStats();
+        });
+        noiseEl.addEventListener("input", () => {
+          DATASET.noise = +noiseEl.value;
+          noiseValEl.textContent = DATASET.noise.toFixed(2);
+        });
+        noiseEl.addEventListener("change", () => {
+          DATASET.generate();
+          history = [];
+          doSplit();
+          renderPlot();
+          renderHist();
+          renderStats();
+          KFOLD.onDatasetChanged();
+        });
+        nEl.addEventListener("input", () => {
+          DATASET.n = +nEl.value;
+          nValEl.textContent = DATASET.n;
+        });
+        nEl.addEventListener("change", () => {
+          DATASET.generate();
+          history = [];
+          doSplit();
+          renderPlot();
+          renderHist();
+          renderStats();
+          KFOLD.onDatasetChanged();
+        });
+
+        document.getElementById("luck-roll").addEventListener("click", roll);
+        document.getElementById("luck-roll-100").addEventListener("click", () => rollMany(100));
+        document.getElementById("luck-regen").addEventListener("click", () => {
+          DATASET.generate();
+          history = [];
+          doSplit();
+          renderPlot();
+          renderHist();
+          renderStats();
+          KFOLD.onDatasetChanged();
+        });
+        document.getElementById("luck-clear").addEventListener("click", () => {
+          history = [];
+          renderHist();
+          renderStats();
+        });
+
+        // init
+        doSplit();
+        renderPlot();
+        renderHist();
+        renderStats();
+
+        return {
+          get testFraction() { return testFraction; },
+          get history() { return history; },
+          get split() { return split; },
+        };
+      })();
+
+      // =====================================================================
+      // TAB 2 — K-FOLD
+      // =====================================================================
+      const KFOLD = (() => {
+        const svgPlot = document.getElementById("kf-plot");
+        const svgMat  = document.getElementById("kf-matrix");
+        const svgBars = document.getElementById("kf-bars");
+
+        const PW_ = 720, PH_ = 400;
+        const M = { l: 48, r: 20, t: 18, b: 38 };
+        const PW = PW_ - M.l - M.r;
+        const PH = PH_ - M.t - M.b;
+
+        const xToPx = (x) => M.l + ((x - DATASET.XMIN) / (DATASET.XMAX - DATASET.XMIN)) * PW;
+        const yToPx = (y) => {
+          const ymin = DATASET.YMIN - 2, ymax = DATASET.YMAX + 2;
+          return M.t + PH - ((y - ymin) / (ymax - ymin)) * PH;
+        };
+
+        let k = 5;
+        let folds = []; // array of arrays of points
+        let results = []; // array of {model, r2, trainPts, valPts}
+        let activeFold = 0;
+
+        const kEl = document.getElementById("kf-k");
+        const kValEl = document.getElementById("kf-k-val");
+        const kShowEl = document.getElementById("kf-k-show");
+        const activeNumEl = document.getElementById("kf-active-num");
+
+        function makeFolds() {
+          const arr = shuffled(DATASET.points);
+          folds = Array.from({ length: k }, () => []);
+          // distribute round-robin so fold sizes are as balanced as possible
+          for (let i = 0; i < arr.length; i++) folds[i % k].push(arr[i]);
+        }
+
+        function runCV() {
+          results = [];
+          for (let i = 0; i < k; i++) {
+            const val = folds[i];
+            const train = [];
+            for (let j = 0; j < k; j++) if (j !== i) train.push(...folds[j]);
+            if (train.length < 2 || val.length < 1) { results.push({ r2: NaN, train, val, model: { m: 0, b: 0 } }); continue; }
+            const model = ols(train);
+            results.push({ r2: r2(val, model), train, val, model });
+          }
+          if (activeFold >= k) activeFold = 0;
+          renderAll();
+          runStabilityShowdown();
+        }
+
+        // ---------- plot: active fold ----------
+        function renderPlot() {
+          const parts = [];
+          // grid + axes
+          parts.push('<g stroke="rgba(11,11,11,0.10)" stroke-width="1">');
+          for (let x = DATASET.XMIN; x <= DATASET.XMAX; x++) {
+            parts.push(`<line x1="${xToPx(x)}" y1="${M.t}" x2="${xToPx(x)}" y2="${M.t + PH}"/>`);
+          }
+          const ymin = DATASET.YMIN - 2, ymax = DATASET.YMAX + 2;
+          for (let y = Math.ceil(ymin); y <= Math.floor(ymax); y += 2) {
+            parts.push(`<line x1="${M.l}" y1="${yToPx(y)}" x2="${M.l + PW}" y2="${yToPx(y)}"/>`);
+          }
+          parts.push("</g>");
+          parts.push(`<g stroke="#0b0b0b" stroke-width="2" fill="none">
+            <line x1="${M.l}" y1="${M.t + PH}" x2="${M.l + PW}" y2="${M.t + PH}"/>
+            <line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t + PH}"/>
+          </g>`);
+          parts.push('<g font-family="Courier New, monospace" font-size="10" fill="#0b0b0b" text-anchor="middle">');
+          for (let x = DATASET.XMIN; x <= DATASET.XMAX; x++) parts.push(`<text x="${xToPx(x)}" y="${M.t + PH + 14}">${x}</text>`);
+          parts.push("</g>");
+          parts.push('<g font-family="Courier New, monospace" font-size="10" fill="#0b0b0b" text-anchor="end">');
+          for (let y = Math.ceil(ymin); y <= Math.floor(ymax); y += 2) parts.push(`<text x="${M.l - 6}" y="${yToPx(y) + 3}">${y}</text>`);
+          parts.push("</g>");
+
+          if (results.length) {
+            const fr = results[activeFold];
+            // fitted line
+            const yAtMin = fr.model.m * DATASET.XMIN + fr.model.b;
+            const yAtMax = fr.model.m * DATASET.XMAX + fr.model.b;
+            parts.push(`<line x1="${xToPx(DATASET.XMIN)}" y1="${yToPx(yAtMin)}" x2="${xToPx(DATASET.XMAX)}" y2="${yToPx(yAtMax)}" stroke="#0b0b0b" stroke-width="3"/>`);
+
+            // residuals on validation
+            for (const p of fr.val) {
+              const yh = fr.model.m * p.x + fr.model.b;
+              parts.push(`<line x1="${xToPx(p.x)}" y1="${yToPx(p.y)}" x2="${xToPx(p.x)}" y2="${yToPx(yh)}" stroke="#c8102e" stroke-width="2" stroke-dasharray="3 3"/>`);
+            }
+            // train (black)
+            for (const p of fr.train) {
+              parts.push(`<circle cx="${xToPx(p.x)}" cy="${yToPx(p.y)}" r="5.5" fill="#0b0b0b" stroke="#efe7d4" stroke-width="2"/>`);
+            }
+            // val (hollow red)
+            for (const p of fr.val) {
+              parts.push(`<circle cx="${xToPx(p.x)}" cy="${yToPx(p.y)}" r="6" fill="#efe7d4" stroke="#c8102e" stroke-width="3"/>`);
+            }
+            // stamp
+            parts.push(`<g font-family="Impact, sans-serif" letter-spacing="1">
+              <text x="${M.l + 10}" y="${M.t + 18}" font-size="14" fill="#0b0b0b">FOLD ${activeFold + 1} / ${k}</text>
+              <text x="${M.l + PW - 10}" y="${M.t + 18}" font-size="14" fill="#c8102e" text-anchor="end">VAL R² = ${fmt(fr.r2, 3)}</text>
+            </g>`);
+          } else {
+            parts.push(`<text x="${M.l + PW / 2}" y="${M.t + PH / 2}" font-family="Impact, sans-serif" font-size="22" fill="#0b0b0b" text-anchor="middle" letter-spacing="2">PRESS RUN K-FOLD CV</text>`);
+          }
+
+          svgPlot.innerHTML = parts.join("");
+          activeNumEl.textContent = activeFold + 1;
+          kShowEl.textContent = k;
+        }
+
+        // ---------- fold schedule matrix ----------
+        function renderMatrix() {
+          const MW = 720, MH = 280;
+          const MM = { l: 60, r: 10, t: 20, b: 40 };
+          const MPW = MW - MM.l - MM.r;
+          const MPH = MH - MM.t - MM.b;
+
+          if (!results.length) {
+            svgMat.innerHTML = `<text x="${MW / 2}" y="${MH / 2}" font-family="Impact, sans-serif" font-size="20" fill="#0b0b0b" text-anchor="middle" letter-spacing="2">RUN K-FOLD TO SEE THE SCHEDULE</text>`;
+            return;
+          }
+
+          const n = DATASET.points.length;
+          const cellW = MPW / n;
+          const cellH = Math.min(MPH / k, 34);
+
+          // map each point id → its fold
+          const foldOfId = new Map();
+          folds.forEach((f, fi) => f.forEach((p) => foldOfId.set(p.id, fi)));
+
+          const parts = [];
+
+          // rows
+          for (let f = 0; f < k; f++) {
+            const y = MM.t + f * cellH;
+            parts.push(`<text x="${MM.l - 8}" y="${y + cellH * 0.62}" font-family="Impact, sans-serif" font-size="12" fill="${f === activeFold ? "#c8102e" : "#0b0b0b"}" text-anchor="end" letter-spacing="1">FOLD ${f + 1}</text>`);
+            for (let i = 0; i < n; i++) {
+              const x = MM.l + i * cellW;
+              const isVal = foldOfId.get(DATASET.points[i].id) === f;
+              const fill = isVal ? "#c8102e" : "#0b0b0b";
+              parts.push(`<rect class="kf-row" data-f="${f}" x="${x + 1}" y="${y + 2}" width="${Math.max(1, cellW - 2)}" height="${cellH - 4}" fill="${fill}" style="cursor:pointer"/>`);
+            }
+            // row highlight for active fold
+            if (f === activeFold) {
+              parts.push(`<rect x="${MM.l - 2}" y="${y}" width="${MPW + 4}" height="${cellH}" fill="none" stroke="#c8102e" stroke-width="3" style="pointer-events:none"/>`);
+            }
+          }
+
+          // bottom label
+          parts.push(`<text x="${MM.l + MPW / 2}" y="${MH - 10}" font-family="Impact, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" letter-spacing="1">SAMPLES 1 … ${n}</text>`);
+
+          svgMat.innerHTML = parts.join("");
+          svgMat.querySelectorAll(".kf-row").forEach((el) => {
+            el.addEventListener("click", () => {
+              activeFold = +el.dataset.f;
+              renderPlot();
+              renderMatrix();
+              renderBars();
+            });
+          });
+        }
+
+        // ---------- per-fold bar chart ----------
+        function renderBars() {
+          const BW = 720, BH = 260;
+          const BM = { l: 56, r: 20, t: 18, b: 36 };
+          const BPW = BW - BM.l - BM.r;
+          const BPH = BH - BM.t - BM.b;
+
+          if (!results.length) {
+            svgBars.innerHTML = `<text x="${BW / 2}" y="${BH / 2}" font-family="Impact, sans-serif" font-size="18" fill="#0b0b0b" text-anchor="middle" letter-spacing="2">—</text>`;
+            document.getElementById("kf-m-mean").querySelector(".val").textContent = "—";
+            document.getElementById("kf-m-mean").querySelector(".bar > div").style.width = "0%";
+            document.getElementById("kf-m-std").querySelector(".val").textContent = "—";
+            document.getElementById("kf-m-std").querySelector(".bar > div").style.width = "0%";
+            return;
+          }
+
+          // x = R² axis, y = fold index
+          const XL = Math.min(0, ...results.map((r) => (Number.isFinite(r.r2) ? r.r2 : 0)));
+          const XR = 1;
+          const rToX = (v) => BM.l + ((v - XL) / (XR - XL)) * BPW;
+          const rowH = Math.max(10, Math.min(BPH / k, 28));
+
+          const parts = [];
+
+          // x gridlines
+          parts.push('<g stroke="rgba(11,11,11,0.12)" stroke-width="1">');
+          for (let v = Math.ceil(XL * 4) / 4; v <= XR; v += 0.25) {
+            parts.push(`<line x1="${rToX(v)}" y1="${BM.t}" x2="${rToX(v)}" y2="${BM.t + BPH}"/>`);
+          }
+          parts.push("</g>");
+          parts.push(`<line x1="${rToX(0)}" y1="${BM.t}" x2="${rToX(0)}" y2="${BM.t + BPH}" stroke="#0b0b0b" stroke-width="1.5" stroke-dasharray="3 3" opacity="0.55"/>`);
+
+          // bars
+          const rs = results.map((r) => r.r2);
+          const m = mean(rs.filter(Number.isFinite));
+          for (let i = 0; i < k; i++) {
+            const y = BM.t + i * rowH + 2;
+            const h = rowH - 6;
+            const r = results[i].r2;
+            const zx = rToX(0);
+            const bx = rToX(Number.isFinite(r) ? r : 0);
+            const fill = i === activeFold ? "#c8102e" : "#0b0b0b";
+            const x0 = Math.min(zx, bx), w = Math.max(1, Math.abs(bx - zx));
+            parts.push(`<rect class="kf-bar" data-f="${i}" x="${x0}" y="${y}" width="${w}" height="${h}" fill="${fill}" style="cursor:pointer"/>`);
+            parts.push(`<text x="${BM.l - 8}" y="${y + h * 0.72}" font-family="Impact, sans-serif" font-size="11" fill="${i === activeFold ? '#c8102e' : '#0b0b0b'}" text-anchor="end" letter-spacing="1">FOLD ${i + 1}</text>`);
+            parts.push(`<text x="${bx + (bx > zx ? 6 : -6)}" y="${y + h * 0.72}" font-family="Courier New, monospace" font-size="11" fill="#0b0b0b" text-anchor="${bx > zx ? 'start' : 'end'}">${fmt(r, 3)}</text>`);
+          }
+
+          // mean line
+          if (Number.isFinite(m)) {
+            const mx = rToX(m);
+            parts.push(`<line x1="${mx}" y1="${BM.t - 2}" x2="${mx}" y2="${BM.t + BPH + 2}" stroke="#c8102e" stroke-width="3"/>`);
+            parts.push(`<text x="${mx}" y="${BM.t - 6}" font-family="Impact, sans-serif" font-size="11" fill="#c8102e" text-anchor="middle" letter-spacing="1">MEAN ${m.toFixed(3)}</text>`);
+          }
+
+          // x labels
+          parts.push('<g font-family="Courier New, monospace" font-size="10" fill="#0b0b0b" text-anchor="middle">');
+          for (let v = Math.ceil(XL * 4) / 4; v <= XR; v += 0.25) {
+            parts.push(`<text x="${rToX(v)}" y="${BM.t + BPH + 14}">${v.toFixed(2)}</text>`);
+          }
+          parts.push("</g>");
+          parts.push(`<text x="${BM.l + BPW / 2}" y="${BH - 6}" font-family="Impact, sans-serif" font-size="12" fill="#0b0b0b" text-anchor="middle" letter-spacing="1">VALIDATION R² PER FOLD</text>`);
+
+          svgBars.innerHTML = parts.join("");
+          svgBars.querySelectorAll(".kf-bar").forEach((el) => {
+            el.addEventListener("click", () => {
+              activeFold = +el.dataset.f;
+              renderPlot();
+              renderMatrix();
+              renderBars();
+            });
+          });
+
+          // metric cards
+          const s = std(rs.filter(Number.isFinite));
+          setMetric("kf-m-mean", m);
+          setMetric("kf-m-std", s);
+        }
+
+        function setMetric(id, v) {
+          const el = document.getElementById(id);
+          el.querySelector(".val").textContent = fmt(v, 3);
+          el.querySelector(".bar > div").style.width = (clamp(v || 0, 0, 1) * 100).toFixed(1) + "%";
+        }
+
+        // ---------- stability showdown: 100 single splits vs 100 k-fold runs ----------
+        function runStabilityShowdown() {
+          const REPS = 100;
+          const tf = LUCK.testFraction;
+
+          // 100 single splits
+          const singles = [];
+          for (let r = 0; r < REPS; r++) {
+            const a = shuffled(DATASET.points);
+            const tn = Math.max(2, Math.round(a.length * tf));
+            const test = a.slice(0, tn);
+            const train = a.slice(tn);
+            if (train.length < 2 || test.length < 2) continue;
+            const model = ols(train);
+            const rr = r2(test, model);
+            if (Number.isFinite(rr)) singles.push(rr);
+          }
+
+          // 100 k-fold runs (each averaged across folds)
+          const avgs = [];
+          for (let r = 0; r < REPS; r++) {
+            const a = shuffled(DATASET.points);
+            const f = Array.from({ length: k }, () => []);
+            for (let i = 0; i < a.length; i++) f[i % k].push(a[i]);
+            const scores = [];
+            for (let i = 0; i < k; i++) {
+              const val = f[i];
+              const train = [];
+              for (let j = 0; j < k; j++) if (j !== i) train.push(...f[j]);
+              if (train.length < 2 || val.length < 1) continue;
+              const model = ols(train);
+              const rr = r2(val, model);
+              if (Number.isFinite(rr)) scores.push(rr);
+            }
+            const mm = mean(scores);
+            if (Number.isFinite(mm)) avgs.push(mm);
+          }
+
+          const sSingle = std(singles);
+          const sAvg = std(avgs);
+          document.getElementById("kf-s-single").textContent = fmt(sSingle, 3);
+          document.getElementById("kf-s-kfold").textContent = fmt(sAvg, 3);
+
+          const ins = document.getElementById("kf-insight");
+          if (!Number.isFinite(sSingle) || !Number.isFinite(sAvg)) {
+            ins.innerHTML = "Not enough data to run the showdown — increase n or decrease k.";
+          } else {
+            const ratio = sSingle / Math.max(1e-6, sAvg);
+            ins.innerHTML = `Across 100 simulations, the <b>single-split</b> estimate has std <b>${sSingle.toFixed(3)}</b>, while the <b>k-fold average</b> has std <b>${sAvg.toFixed(3)}</b> — about <b>${ratio.toFixed(1)}× tighter</b>. Same dataset, same model, but the k-fold number you'd report moves much less from run to run.`;
+          }
+        }
+
+        // ---------- public control wiring ----------
+        function renderAll() { renderPlot(); renderMatrix(); renderBars(); }
+
+        kEl.addEventListener("input", () => {
+          k = +kEl.value;
+          kValEl.textContent = k;
+          kShowEl.textContent = k;
+        });
+        kEl.addEventListener("change", () => {
+          makeFolds();
+          runCV();
+        });
+
+        document.getElementById("kf-run").addEventListener("click", () => {
+          if (!folds.length) makeFolds();
+          runCV();
+        });
+        document.getElementById("kf-reshuffle").addEventListener("click", () => {
+          makeFolds();
+          runCV();
+        });
+        document.getElementById("kf-prev").addEventListener("click", () => {
+          if (!results.length) return;
+          activeFold = (activeFold - 1 + k) % k;
+          renderPlot(); renderMatrix(); renderBars();
+        });
+        document.getElementById("kf-next").addEventListener("click", () => {
+          if (!results.length) return;
+          activeFold = (activeFold + 1) % k;
+          renderPlot(); renderMatrix(); renderBars();
+        });
+
+        document.querySelectorAll("[data-kf-k]").forEach((b) => {
+          b.addEventListener("click", () => {
+            k = +b.dataset.kfK;
+            if (k > DATASET.points.length) k = DATASET.points.length;
+            kEl.value = k;
+            kValEl.textContent = k;
+            makeFolds();
+            runCV();
+          });
+        });
+        document.getElementById("kf-loo").addEventListener("click", () => {
+          k = DATASET.points.length;
+          kEl.value = Math.min(15, k);  // visual slider max
+          kValEl.textContent = k;
+          makeFolds();
+          runCV();
+        });
+
+        // initial state — empty results
+        function onDatasetChanged() {
+          // fold too large?
+          if (k > DATASET.points.length) k = DATASET.points.length;
+          folds = [];
+          results = [];
+          activeFold = 0;
+          renderAll();
+        }
+
+        makeFolds();
+        runCV();
+
+        return { onDatasetChanged };
+      })();
+    </script>
+  </body>
+</html>

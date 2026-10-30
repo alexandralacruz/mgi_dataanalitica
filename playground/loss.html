@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gradient Descent & Loss Function Visualizer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f4f7f6; margin: 0; padding: 20px; }
+        h2 { color: #2c3e50; margin-bottom: 5px; }
+        .container { display: flex; gap: 20px; width: 100%; max-width: 1000px; justify-content: center; flex-wrap: wrap; }
+        .chart-wrapper { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); width: 45%; min-width: 400px; }
+        .controls { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); width: 100%; max-width: 950px; margin-top: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .sliders { display: flex; gap: 40px; }
+        .slider-group { flex: 1; display: flex; flex-direction: column; }
+        label { font-weight: bold; margin-bottom: 5px; color: #34495e; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        .stats { display: flex; justify-content: space-between; background: #ecf0f1; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 1.1em; }
+        .buttons { display: flex; gap: 10px; }
+        button { flex: 1; padding: 12px 20px; font-size: 1em; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px; transition: background 0.2s; font-weight: bold;}
+        button:hover { background: #2980b9; }
+        button.secondary { background: #95a5a6; }
+        button.secondary:hover { background: #7f8c8d; }
+        button:disabled { background: #bdc3c7; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <h2>Interactive Gradient Descent</h2>
+
+    <div class="container">
+        <div class="chart-wrapper">
+            <canvas id="regChart"></canvas>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="lossChart"></canvas>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="sliders">
+            <div class="slider-group">
+                <label>Slope (m): <span id="mVal">0.50</span></label>
+                <input type="range" id="mSlider" min="-1" max="3" step="0.05" value="-0.5">
+            </div>
+            <div class="slider-group">
+                <label>Intercept (b): <span id="bVal">0.00</span></label>
+                <input type="range" id="bSlider" min="-5" max="5" step="0.1" value="0">
+            </div>
+            <div class="slider-group">
+                <label>Learning Rate (α): <span id="lrVal">0.02</span></label>
+                <input type="range" id="lrSlider" min="0.001" max="0.1" step="0.001" value="0.02">
+            </div>
+        </div>
+        
+        <div class="stats">
+            <span>Eq: y = <span id="eq-m">-0.50</span>x + <span id="eq-b">0.00</span></span>
+            <span>Steps Taken: <span id="stepCount">0</span></span>
+            <span>MSE (Loss): <strong id="lossVal" style="color: #e74c3c;">0.000</strong></span>
+        </div>
+
+        <div class="buttons">
+            <button id="stepButton" class="secondary" onclick="takeSingleStep()">Take 1 Step</button>
+            <button id="gdButton" onclick="animateGradientDescent()">Animate to Convergence</button>
+            <button id="resetButton" class="secondary" onclick="resetPath()">Clear Path</button>
+        </div>
+    </div>
+
+    <script>
+        const dataPoints = [
+            {x: 1, y: 1.5}, {x: 2, y: 3.0}, {x: 3, y: 2.5}, {x: 4, y: 5.0}, {x: 5, y: 4.5}
+        ];
+
+        const mSlider = document.getElementById('mSlider');
+        const bSlider = document.getElementById('bSlider');
+        const lrSlider = document.getElementById('lrSlider');
+        const gdButton = document.getElementById('gdButton');
+        const stepButton = document.getElementById('stepButton');
+        
+        let pathHistory = []; // Stores {m, loss} coordinates to draw the trail
+        let isAnimating = false;
+
+        const regChart = new Chart(document.getElementById('regChart'), {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    { label: 'Data Points', data: dataPoints, backgroundColor: '#3498db', pointRadius: 6 },
+                    { label: 'Regression Line', type: 'line', data: [], borderColor: '#e74c3c', borderWidth: 3, fill: false, pointRadius: 0 }
+                ]
+            },
+            options: { responsive: true, scales: { x: {min: 0, max: 6}, y: {min: 0, max: 7} }, plugins: { title: { display: true, text: 'Data & Model' } } }
+        });
+
+        const lossChart = new Chart(document.getElementById('lossChart'), {
+            type: 'scatter', // Set base type to scatter
+            data: {
+                datasets: [
+                    { label: 'Loss Curve', type: 'line', data: [], borderColor: '#bdc3c7', borderWidth: 2, fill: false, pointRadius: 0, borderDash: [5, 5] },
+                    { label: 'GD Path', type: 'line', data: [], borderColor: '#2ecc71', borderWidth: 2, fill: false, pointRadius: 4, pointBackgroundColor: '#2ecc71' },
+                    { label: 'Current Weights', type: 'scatter', data: [], backgroundColor: '#e74c3c', pointRadius: 8, pointHoverRadius: 10 }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: { 
+                    x: { type: 'linear', title: {display:true, text:'Slope (m)'}, min: -1, max: 3 }, // Force linear X axis
+                    y: { title: {display:true, text:'Loss (MSE)'}, min: 0, max: 30 } 
+                },
+                plugins: { title: { display: true, text: 'The Loss Landscape' } },
+                animation: { duration: 0 }
+            }
+        });
+
+        function calculateMSE(m, b) {
+            return dataPoints.reduce((acc, p) => acc + Math.pow((m * p.x + b) - p.y, 2), 0) / dataPoints.length;
+        }
+
+        function generateLossCurve(currentB) {
+            let curveData = [];
+            for(let m = -1; m <= 3.1; m += 0.1) {
+                curveData.push({ x: m, y: calculateMSE(m, currentB) });
+            }
+            return curveData;
+        }
+
+        function updateUI(recordPath = false) {
+            const m = parseFloat(mSlider.value);
+            const b = parseFloat(bSlider.value);
+            const lr = parseFloat(lrSlider.value);
+            
+            document.getElementById('mVal').innerText = m.toFixed(2);
+            document.getElementById('bVal').innerText = b.toFixed(2);
+            document.getElementById('lrVal').innerText = lr.toFixed(3);
+            document.getElementById('eq-m').innerText = m.toFixed(2);
+            document.getElementById('eq-b').innerText = b >= 0 ? b.toFixed(2) : `- ${Math.abs(b).toFixed(2)}`;
+            
+            regChart.data.datasets[1].data = [{x: 0, y: b}, {x: 6, y: m * 6 + b}];
+            regChart.update();
+
+            const currentLoss = calculateMSE(m, b);
+            document.getElementById('lossVal').innerText = currentLoss.toFixed(3);
+            document.getElementById('stepCount').innerText = pathHistory.length;
+
+            if (recordPath) {
+                pathHistory.push({x: m, y: currentLoss});
+            }
+
+            lossChart.data.datasets[0].data = generateLossCurve(b); 
+            lossChart.data.datasets[1].data = pathHistory; // Draw the trail
+            lossChart.data.datasets[2].data = [{x: m, y: currentLoss}]; 
+            lossChart.update();
+        }
+
+        function takeSingleStep() {
+            let m = parseFloat(mSlider.value);
+            let b = parseFloat(bSlider.value);
+            const lr = parseFloat(lrSlider.value);
+
+            let m_grad = 0;
+            let b_grad = 0;
+            
+            dataPoints.forEach(p => {
+                m_grad += 2 * (m * p.x + b - p.y) * p.x;
+                b_grad += 2 * (m * p.x + b - p.y);
+            });
+
+            m_grad /= dataPoints.length;
+            b_grad /= dataPoints.length;
+
+            m -= m_grad * lr;
+            b -= b_grad * lr;
+
+            // Stop if it explodes out of bounds
+            if (m < -5 || m > 10 || isNaN(m)) {
+                alert("The loss exploded! The learning rate is too high.");
+                isAnimating = false;
+                return false; 
+            }
+
+            mSlider.value = m;
+            bSlider.value = b;
+            
+            // Check for convergence
+            if (Math.abs(m_grad) < 0.001 && Math.abs(b_grad) < 0.001) {
+                isAnimating = false;
+                return false; // Converged
+            }
+
+            updateUI(true);
+            return true;
+        }
+
+        async function animateGradientDescent() {
+            if (isAnimating) return;
+            isAnimating = true;
+            gdButton.disabled = true;
+            stepButton.disabled = true;
+
+            // If starting fresh, record initial position
+            if (pathHistory.length === 0) {
+                updateUI(true); 
+            }
+
+            while (isAnimating) {
+                let keepGoing = takeSingleStep();
+                if (!keepGoing) break;
+                await new Promise(r => setTimeout(r, 100)); // 100ms between steps
+            }
+
+            gdButton.disabled = false;
+            stepButton.disabled = false;
+            isAnimating = false;
+        }
+
+        function resetPath() {
+            pathHistory = [];
+            isAnimating = false;
+            updateUI(false); // Update without recording a step
+        }
+
+        // Event Listeners: Clear path if user manually drags sliders
+        mSlider.addEventListener('input', () => { resetPath(); });
+        bSlider.addEventListener('input', () => { resetPath(); });
+        lrSlider.addEventListener('input', () => { document.getElementById('lrVal').innerText = parseFloat(lrSlider.value).toFixed(3); });
+        
+        // Initial Draw
+        updateUI(false);
+    </script>
+</body>
+</html>

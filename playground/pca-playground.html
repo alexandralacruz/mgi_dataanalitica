@@ -1,0 +1,1919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PCA PLAYGROUND // TRASH POLKA EDITION</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;700&display=swap');
+
+  :root {
+    --black: #0a0a0a;
+    --red: #c41e1e;
+    --red-bright: #ff2222;
+    --white: #f0e8e0;
+    --gray: #2a2a2a;
+    --gray-light: #444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'IBM Plex Mono', monospace;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* === SPLATTER BACKGROUND === */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse at 10% 20%, rgba(196,30,30,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 80%, rgba(196,30,30,0.05) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(255,255,255,0.02) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* === HEADER === */
+  .header {
+    position: relative;
+    padding: 40px 40px 20px;
+    border-bottom: 3px solid var(--red);
+    overflow: hidden;
+  }
+
+  .header::after {
+    content: 'PCA PCA PCA PCA PCA PCA PCA PCA PCA PCA PCA PCA';
+    position: absolute;
+    top: 10px; right: -20px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 120px;
+    color: rgba(196,30,30,0.06);
+    white-space: nowrap;
+    pointer-events: none;
+    transform: rotate(-3deg);
+  }
+
+  .header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 64px;
+    letter-spacing: 6px;
+    line-height: 1;
+    position: relative;
+  }
+
+  .header h1 span.red { color: var(--red); }
+  .header h1 span.strike {
+    text-decoration: line-through;
+    text-decoration-color: var(--red);
+    opacity: 0.4;
+  }
+
+  .header .subtitle {
+    font-family: 'Special Elite', cursive;
+    font-size: 18px;
+    margin-top: 8px;
+    color: #999;
+    letter-spacing: 2px;
+  }
+
+  .header .math-ghost {
+    position: absolute;
+    right: 40px;
+    top: 20px;
+    font-size: 14px;
+    color: rgba(196,30,30,0.25);
+    text-align: right;
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1.6;
+    white-space: pre;
+  }
+
+  /* === MAIN LAYOUT === */
+  .container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .panel {
+    padding: 30px;
+    border: 1px solid var(--gray);
+    position: relative;
+  }
+
+  .panel::before {
+    content: attr(data-label);
+    position: absolute;
+    top: -1px; left: 20px;
+    background: var(--black);
+    padding: 0 12px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: var(--red);
+  }
+
+  /* === CANVAS STYLES === */
+  canvas {
+    background: var(--black);
+    border: 1px solid var(--gray-light);
+    cursor: crosshair;
+    display: block;
+    width: 100%;
+    image-rendering: auto;
+  }
+
+  canvas.main-canvas {
+    aspect-ratio: 6 / 5;
+  }
+
+  canvas.var-canvas-tall {
+    aspect-ratio: 2 / 1;
+  }
+
+  canvas.var-canvas-short {
+    aspect-ratio: 600 / 220;
+  }
+
+  /* === CONTROLS === */
+  .controls {
+    padding: 30px 40px;
+    border-bottom: 1px solid var(--gray);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .btn {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    padding: 8px 20px;
+    border: 2px solid var(--red);
+    background: transparent;
+    color: var(--white);
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .btn:hover {
+    background: var(--red);
+    color: var(--black);
+  }
+
+  .btn.active {
+    background: var(--red);
+    color: var(--black);
+  }
+
+  .btn-ghost {
+    border-color: var(--gray-light);
+    font-size: 15px;
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--white);
+    background: transparent;
+    color: var(--white);
+  }
+
+  .separator {
+    width: 1px;
+    height: 30px;
+    background: var(--gray-light);
+  }
+
+  label.ctrl-label {
+    font-family: 'Special Elite', cursive;
+    font-size: 14px;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    background: var(--gray);
+    height: 4px;
+    border-radius: 0;
+    outline: none;
+    width: 100px;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--red);
+    border: none;
+    cursor: pointer;
+  }
+
+  select {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    background: var(--gray);
+    color: var(--white);
+    border: 1px solid var(--gray-light);
+    padding: 6px 10px;
+  }
+
+  /* === INFO PANELS === */
+  .info-bar {
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--gray);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+
+  .info-card {
+    background: rgba(196,30,30,0.05);
+    border-left: 3px solid var(--red);
+    padding: 12px 16px;
+  }
+
+  .info-card .label {
+    font-family: 'Special Elite', cursive;
+    font-size: 11px;
+    color: #777;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .info-card .value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    color: var(--white);
+    margin-top: 2px;
+  }
+
+  .info-card .value.red { color: var(--red-bright); }
+
+  /* === STEP EXPLANATION === */
+  .steps-panel {
+    padding: 30px 40px;
+    border-bottom: 1px solid var(--gray);
+  }
+
+  .steps-panel h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    color: var(--red);
+  }
+
+  .step-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 1.5fr;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    align-items: start;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .step-row:hover { background: rgba(196,30,30,0.05); }
+  .step-row.active-step { background: rgba(196,30,30,0.1); }
+
+  .step-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    color: var(--red);
+    line-height: 1;
+  }
+
+  .step-title {
+    font-family: 'Special Elite', cursive;
+    font-size: 15px;
+    color: var(--white);
+  }
+
+  .step-math {
+    font-size: 13px;
+    color: #888;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* === VARIANCE BAR === */
+  .variance-container {
+    padding: 20px 0;
+  }
+
+  .var-bar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0;
+  }
+
+  .var-bar-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    width: 40px;
+    color: #888;
+  }
+
+  .var-bar-track {
+    flex: 1;
+    height: 18px;
+    background: var(--gray);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .var-bar-fill {
+    height: 100%;
+    background: var(--red);
+    transition: width 0.4s ease;
+  }
+
+  .var-bar-fill.secondary {
+    background: #661111;
+  }
+
+  .var-bar-value {
+    font-size: 13px;
+    width: 55px;
+    text-align: right;
+    color: var(--white);
+  }
+
+  /* === MATRIX DISPLAY === */
+  .matrix-display {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: #aaa;
+    background: rgba(255,255,255,0.03);
+    padding: 12px;
+    border-left: 2px solid var(--red);
+    margin: 10px 0;
+    overflow-x: auto;
+    white-space: pre;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  /* === FOOTER === */
+  .footer {
+    padding: 30px 40px;
+    text-align: center;
+    color: #444;
+    font-size: 12px;
+    font-family: 'Special Elite', cursive;
+    border-top: 1px solid var(--gray);
+  }
+
+  .footer span { color: var(--red); }
+
+  /* === SPLATTER DECORATIONS === */
+  .splatter {
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .full-width {
+    grid-column: 1 / -1;
+  }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 900px) {
+    .container { grid-template-columns: 1fr; }
+    .header h1 { font-size: 36px; }
+    .header .math-ghost { display: none; }
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--black); }
+  ::-webkit-scrollbar-thumb { background: var(--red); }
+
+  .tooltip {
+    position: absolute;
+    background: var(--gray);
+    border: 1px solid var(--red);
+    padding: 6px 10px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 100;
+    display: none;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .click-hint {
+    font-family: 'Special Elite', cursive;
+    font-size: 13px;
+    color: #555;
+    text-align: center;
+    padding: 8px;
+  }
+
+  /* === TABS === */
+  .tab-bar {
+    display: flex;
+    border-bottom: 2px solid var(--gray);
+    padding: 0 40px;
+    gap: 0;
+  }
+
+  .tab-btn {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 3px;
+    padding: 14px 28px;
+    background: transparent;
+    color: #666;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .tab-btn:hover { color: var(--white); }
+
+  .tab-btn.active-tab {
+    color: var(--red);
+    border-bottom-color: var(--red);
+  }
+
+  .tab-btn.active-tab::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0; right: 0;
+    height: 3px;
+    background: var(--red);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.visible { display: block; }
+
+  /* === VARIANCE EXPLAINER === */
+  .variance-explainer {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 30px 40px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .var-exp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 20px;
+  }
+
+  @media (max-width: 900px) {
+    .var-exp-grid { grid-template-columns: 1fr; }
+  }
+
+  .var-exp-card {
+    border: 1px solid var(--gray);
+    padding: 24px;
+    position: relative;
+  }
+
+  .var-exp-card h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--red);
+    margin-bottom: 12px;
+  }
+
+  .var-exp-card p, .var-exp-card li {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #bbb;
+  }
+
+  .var-exp-card ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .var-exp-card ul li::before {
+    content: '//';
+    color: var(--red);
+    margin-right: 8px;
+    font-weight: bold;
+  }
+
+  .var-exp-card .formula {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    color: var(--red-bright);
+    background: rgba(196,30,30,0.08);
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-left: 3px solid var(--red);
+  }
+
+  .var-exp-card canvas {
+    cursor: default;
+  }
+
+  .var-demo-controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .var-demo-controls .btn {
+    font-size: 14px;
+    padding: 6px 14px;
+  }
+
+  .var-demo-stat {
+    display: inline-block;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: var(--white);
+    margin: 4px 12px 4px 0;
+  }
+
+  .var-demo-stat .stat-label {
+    font-family: 'Special Elite', cursive;
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: block;
+  }
+
+  .var-demo-stat .stat-val {
+    color: var(--red-bright);
+  }
+
+  .analogy-box {
+    background: rgba(196,30,30,0.05);
+    border: 1px dashed var(--red);
+    padding: 16px 20px;
+    margin-top: 16px;
+  }
+
+  .analogy-box .analogy-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    color: var(--red);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  .analogy-box p {
+    font-size: 13px;
+    color: #999;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>
+    <span class="strike">DIMENSIONS</span>
+    <span class="red">PCA</span> PLAYGROUND
+  </h1>
+  <div class="subtitle">// principal component analysis - interactive decomposition //</div>
+  <div class="math-ghost">X_std = (X - mu) / sigma
+Sigma = (1/m-1) X^T X
+Sigma v = lambda v
+X_reduced = X_std W</div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <button class="btn active" onclick="setMode('draw')" id="btn-draw">DRAW POINTS</button>
+  <button class="btn" onclick="setMode('drag')" id="btn-drag">DRAG MEAN</button>
+  <div class="separator"></div>
+
+  <button class="btn btn-ghost" onclick="loadPreset('blob')">BLOB</button>
+  <button class="btn btn-ghost" onclick="loadPreset('elongated')">ELONGATED</button>
+  <button class="btn btn-ghost" onclick="loadPreset('L')">L-SHAPE</button>
+  <button class="btn btn-ghost" onclick="loadPreset('ring')">RING</button>
+  <button class="btn btn-ghost" onclick="loadPreset('clusters')">3 CLUSTERS</button>
+  <div class="separator"></div>
+
+  <label class="ctrl-label">
+    Noise
+    <input type="range" id="noise-slider" min="0" max="100" value="30" oninput="updateNoise()">
+    <span id="noise-val">30</span>
+  </label>
+
+  <label class="ctrl-label">
+    Points
+    <input type="range" id="npoints-slider" min="20" max="300" value="100" oninput="updateNPoints()">
+    <span id="npoints-val">100</span>
+  </label>
+
+  <div class="separator"></div>
+  <button class="btn" onclick="clearAll()" style="border-color: #661111;">CLEAR</button>
+  <button class="btn" onclick="runPCA()" id="btn-run">RUN PCA</button>
+</div>
+
+<!-- INFO BAR -->
+<div class="info-bar">
+  <div class="info-card">
+    <div class="label">Data Points</div>
+    <div class="value" id="info-points">0</div>
+  </div>
+  <div class="info-card">
+    <div class="label">Original Dims</div>
+    <div class="value">2</div>
+  </div>
+  <div class="info-card">
+    <div class="label">PC1 Variance</div>
+    <div class="value red" id="info-var1">--</div>
+  </div>
+  <div class="info-card">
+    <div class="label">PC2 Variance</div>
+    <div class="value" id="info-var2">--</div>
+  </div>
+  <div class="info-card">
+    <div class="label">PC1 Angle</div>
+    <div class="value" id="info-angle">--</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tab-bar">
+  <button class="tab-btn active-tab" onclick="switchTab('pca')">PCA PLAYGROUND</button>
+  <button class="tab-btn" onclick="switchTab('variance')">WHAT IS VARIANCE?</button>
+</div>
+
+<!-- ============================================ -->
+<!-- TAB: VARIANCE EXPLAINER                      -->
+<!-- ============================================ -->
+<div class="tab-content" id="tab-variance">
+  <div class="variance-explainer">
+
+    <div class="var-exp-grid">
+
+      <!-- LEFT: Interactive Demo -->
+      <div class="var-exp-card">
+        <h3>// INTERACTIVE: FEEL THE SPREAD</h3>
+        <p>Each dot is a data point. Drag the slider to change the spread. Watch how variance measures the "average squared distance from the mean."</p>
+
+        <canvas id="canvas-var-demo" class="var-canvas-tall" width="600" height="300" style="margin-top:14px;"></canvas>
+
+        <div style="margin-top:14px;">
+          <label class="ctrl-label">
+            Spread
+            <input type="range" id="var-spread-slider" min="5" max="95" value="40" oninput="updateVarDemo()">
+          </label>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div class="var-demo-stat">
+            <span class="stat-label">Mean (x&#772;)</span>
+            <span class="stat-val" id="var-demo-mean">--</span>
+          </div>
+          <div class="var-demo-stat">
+            <span class="stat-label">Variance (&sigma;&sup2;)</span>
+            <span class="stat-val" id="var-demo-variance">--</span>
+          </div>
+          <div class="var-demo-stat">
+            <span class="stat-label">Std Dev (&sigma;)</span>
+            <span class="stat-val" id="var-demo-std">--</span>
+          </div>
+        </div>
+
+        <div class="var-demo-controls">
+          <button class="btn btn-ghost" onclick="setVarPreset('tight')">TIGHT</button>
+          <button class="btn btn-ghost" onclick="setVarPreset('medium')">MEDIUM</button>
+          <button class="btn btn-ghost" onclick="setVarPreset('wide')">WIDE</button>
+          <button class="btn btn-ghost" onclick="setVarPreset('bimodal')">BIMODAL</button>
+          <button class="btn btn-ghost" onclick="regenerateVarDemo()">REGENERATE</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: What is Variance -->
+      <div class="var-exp-card">
+        <h3>// THE CONCEPT</h3>
+        <p><strong style="color:var(--white)">Variance</strong> measures how spread out your data is from its center (the mean). It answers: <em style="color:var(--red)">"on average, how far are the data points from the middle?"</em></p>
+
+        <div class="formula">
+          &sigma;&sup2; = (1 / (n-1)) &Sigma; (x&#7522; - x&#772;)&sup2;
+        </div>
+
+        <ul>
+          <li><strong style="color:var(--white)">x&#772;</strong> = mean (average of all points)</li>
+          <li><strong style="color:var(--white)">(x&#7522; - x&#772;)</strong> = deviation from mean</li>
+          <li><strong style="color:var(--white)">(&thinsp;)&sup2;</strong> = squared so negatives don't cancel out</li>
+          <li><strong style="color:var(--white)">&Sigma; / (n-1)</strong> = average it out (Bessel's correction)</li>
+        </ul>
+
+        <div class="analogy-box">
+          <div class="analogy-title">// ANALOGY: THE CLASSROOM</div>
+          <p>Imagine students standing in a line. The <strong style="color:var(--white)">mean</strong> is where the teacher stands (the center). <strong style="color:var(--white)">Variance</strong> is how spread out the students are. If everyone crowds the teacher, variance is low. If students scatter across the room, variance is high.</p>
+        </div>
+      </div>
+
+      <!-- BOTTOM LEFT: Why Squared? -->
+      <div class="var-exp-card">
+        <h3>// WHY SQUARED DISTANCES?</h3>
+        <canvas id="canvas-var-why" class="var-canvas-short" width="600" height="220" style="margin-bottom:10px;"></canvas>
+        <p>The red lines show <strong style="color:var(--red)">deviations</strong> from the mean. If we just summed them, positive and negative would cancel to zero! Squaring makes all distances positive <em>and</em> penalizes big outliers more than small ones.</p>
+
+        <div style="margin-top:12px; display:flex; gap:20px;">
+          <div class="var-demo-stat">
+            <span class="stat-label">Sum of deviations</span>
+            <span class="stat-val" id="var-sum-dev">--</span>
+          </div>
+          <div class="var-demo-stat">
+            <span class="stat-label">Sum of squared dev.</span>
+            <span class="stat-val" id="var-sum-sq-dev">--</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM RIGHT: Why Variance matters for PCA -->
+      <div class="var-exp-card">
+        <h3>// WHY PCA CARES ABOUT VARIANCE</h3>
+        <canvas id="canvas-var-pca" class="var-canvas-short" width="600" height="220" style="margin-bottom:10px;"></canvas>
+        <p>PCA finds the direction of <strong style="color:var(--red)">maximum variance</strong>. Why? Because variance = information. A direction with high variance means data points differ a lot along it &mdash; that's where the interesting structure is.</p>
+
+        <ul style="margin-top:10px;">
+          <li><strong style="color:var(--white)">High variance direction</strong> = lots of information, keep it</li>
+          <li><strong style="color:var(--white)">Low variance direction</strong> = mostly noise, safe to drop</li>
+          <li><strong style="color:var(--white)">Eigenvalue</strong> = the variance along each principal component</li>
+        </ul>
+
+        <div class="analogy-box">
+          <div class="analogy-title">// ANALOGY: SHADOWS</div>
+          <p>Imagine shining a flashlight on a 3D object. The shadow that captures the most detail (widest spread) is like PC1 &mdash; it preserves the most variance. PCA finds the best angle for the flashlight.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- TAB: PCA PLAYGROUND                          -->
+<!-- ============================================ -->
+<div class="tab-content visible" id="tab-pca">
+
+<!-- MAIN CANVAS AREA -->
+<div class="container">
+  <div class="panel" data-label="01 // ORIGINAL DATA + EIGENVECTORS">
+    <canvas id="canvas-original" class="main-canvas" width="600" height="500"></canvas>
+    <div class="click-hint">click to add points // watch the principal components emerge</div>
+  </div>
+
+  <div class="panel" data-label="02 // PCA PROJECTION">
+    <canvas id="canvas-projected" class="main-canvas" width="600" height="500"></canvas>
+    <div class="click-hint">data projected onto principal components</div>
+  </div>
+
+  <!-- VARIANCE EXPLAINED -->
+  <div class="panel full-width" data-label="03 // VARIANCE EXPLAINED">
+    <div class="variance-container">
+      <div class="var-bar-wrapper">
+        <div class="var-bar-label">PC1</div>
+        <div class="var-bar-track"><div class="var-bar-fill" id="var-fill-1" style="width: 0%"></div></div>
+        <div class="var-bar-value" id="var-val-1">--</div>
+      </div>
+      <div class="var-bar-wrapper">
+        <div class="var-bar-label">PC2</div>
+        <div class="var-bar-track"><div class="var-bar-fill secondary" id="var-fill-2" style="width: 0%"></div></div>
+        <div class="var-bar-value" id="var-val-2">--</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEPS -->
+<div class="steps-panel">
+  <h2>// HOW PCA WORKS - STEP BY STEP</h2>
+
+  <div class="step-row" onclick="highlightStep(0)" id="step-0">
+    <div class="step-num">01</div>
+    <div class="step-title">Standardize the data</div>
+    <div class="step-math">X_std = (X - mean(X)) / std(X)</div>
+  </div>
+  <div id="step-detail-0" class="matrix-display" style="display:none;"></div>
+
+  <div class="step-row" onclick="highlightStep(1)" id="step-1">
+    <div class="step-num">02</div>
+    <div class="step-title">Compute covariance matrix</div>
+    <div class="step-math">Sigma = (1/(m-1)) X_std^T X_std</div>
+  </div>
+  <div id="step-detail-1" class="matrix-display" style="display:none;"></div>
+
+  <div class="step-row" onclick="highlightStep(2)" id="step-2">
+    <div class="step-num">03</div>
+    <div class="step-title">Eigen decomposition</div>
+    <div class="step-math">Sigma v_i = lambda_i v_i</div>
+  </div>
+  <div id="step-detail-2" class="matrix-display" style="display:none;"></div>
+
+  <div class="step-row" onclick="highlightStep(3)" id="step-3">
+    <div class="step-num">04</div>
+    <div class="step-title">Sort & select components</div>
+    <div class="step-math">W = [v_1, v_2, ..., v_k]  (sorted by lambda desc)</div>
+  </div>
+  <div id="step-detail-3" class="matrix-display" style="display:none;"></div>
+
+  <div class="step-row" onclick="highlightStep(4)" id="step-4">
+    <div class="step-num">05</div>
+    <div class="step-title">Project data</div>
+    <div class="step-math">X_reduced = X_std @ W</div>
+  </div>
+  <div id="step-detail-4" class="matrix-display" style="display:none;"></div>
+</div>
+
+</div><!-- end tab-pca -->
+
+<div class="footer">
+  CSDS-352 // DATA SCIENCE & MACHINE LEARNING // WEEK 6 <span>//</span> UNSUPERVISED LEARNING
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ==============================
+// DATA STATE
+// ==============================
+let points = [];         // [{x, y}] in data space
+let mode = 'draw';       // 'draw' or 'drag'
+let pcaResult = null;    // computed PCA results
+let animFrame = null;
+
+const canvasOrig = document.getElementById('canvas-original');
+const canvasProj = document.getElementById('canvas-projected');
+const ctxO = canvasOrig.getContext('2d');
+const ctxP = canvasProj.getContext('2d');
+
+// High DPI
+function setupCanvas(canvas) {
+  // Clear any previously set inline dimensions so CSS can flow
+  canvas.style.removeProperty('width');
+  canvas.style.removeProperty('height');
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return false; // hidden tab
+
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // reset previous transforms
+  ctx.scale(dpr, dpr);
+  return true;
+}
+
+function initCanvases() {
+  if (!setupCanvas(canvasOrig) || !setupCanvas(canvasProj)) return;
+  drawAll();
+}
+
+window.addEventListener('resize', () => {
+  // Re-init whichever tab is visible
+  if (document.getElementById('tab-pca').classList.contains('visible')) {
+    initCanvases();
+  } else {
+    initVarDemoCanvases();
+  }
+});
+setTimeout(initCanvases, 100);
+
+// ==============================
+// COORDINATE MAPPING
+// ==============================
+// Data space: arbitrary range, we auto-fit
+// Canvas: pixel coordinates
+
+function getDataBounds() {
+  if (points.length === 0) return { xMin: -5, xMax: 5, yMin: -5, yMax: 5 };
+  let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+  for (const p of points) {
+    if (p.x < xMin) xMin = p.x;
+    if (p.x > xMax) xMax = p.x;
+    if (p.y < yMin) yMin = p.y;
+    if (p.y > yMax) yMax = p.y;
+  }
+  const pad = Math.max((xMax - xMin), (yMax - yMin)) * 0.2 + 1;
+  return { xMin: xMin - pad, xMax: xMax + pad, yMin: yMin - pad, yMax: yMax + pad };
+}
+
+function dataToCanvas(canvas, x, y, bounds) {
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  const margin = 40;
+  const px = margin + (x - bounds.xMin) / (bounds.xMax - bounds.xMin) * (w - 2*margin);
+  const py = h - margin - (y - bounds.yMin) / (bounds.yMax - bounds.yMin) * (h - 2*margin);
+  return [px, py];
+}
+
+function canvasToData(canvas, px, py) {
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  const bounds = getDataBounds();
+  const margin = 40;
+  const x = bounds.xMin + (px - margin) / (w - 2*margin) * (bounds.xMax - bounds.xMin);
+  const y = bounds.yMin + (h - margin - py) / (h - 2*margin) * (bounds.yMax - bounds.yMin);
+  return [x, y];
+}
+
+// ==============================
+// DRAWING
+// ==============================
+
+function drawGrid(ctx, canvas, bounds) {
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+
+  // Grid lines
+  const xRange = bounds.xMax - bounds.xMin;
+  const yRange = bounds.yMax - bounds.yMin;
+  const step = Math.pow(10, Math.floor(Math.log10(Math.max(xRange, yRange))) - 1) * 2;
+
+  for (let v = Math.ceil(bounds.xMin / step) * step; v <= bounds.xMax; v += step) {
+    const [px] = dataToCanvas(canvas, v, 0, bounds);
+    ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h); ctx.stroke();
+  }
+  for (let v = Math.ceil(bounds.yMin / step) * step; v <= bounds.yMax; v += step) {
+    const [, py] = dataToCanvas(canvas, 0, v, bounds);
+    ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(w, py); ctx.stroke();
+  }
+
+  // Axes through origin
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  const [ox, oy] = dataToCanvas(canvas, 0, 0, bounds);
+  ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(w, oy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, h); ctx.stroke();
+}
+
+function drawPoints(ctx, canvas, pts, bounds, color = 'rgba(240,232,224,0.7)', radius = 4) {
+  for (const p of pts) {
+    const [px, py] = dataToCanvas(canvas, p.x, p.y, bounds);
+    ctx.beginPath();
+    ctx.arc(px, py, radius, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+}
+
+function drawArrow(ctx, canvas, ox, oy, dx, dy, bounds, color, lineWidth = 3, label = '') {
+  const [x1, y1] = dataToCanvas(canvas, ox, oy, bounds);
+  const [x2, y2] = dataToCanvas(canvas, ox + dx, oy + dy, bounds);
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+
+  // Arrowhead
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const headLen = 12;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headLen * Math.cos(angle - 0.4), y2 - headLen * Math.sin(angle - 0.4));
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headLen * Math.cos(angle + 0.4), y2 - headLen * Math.sin(angle + 0.4));
+  ctx.stroke();
+
+  if (label) {
+    ctx.fillStyle = color;
+    ctx.font = "bold 14px 'IBM Plex Mono', monospace";
+    ctx.fillText(label, x2 + 8, y2 - 8);
+  }
+}
+
+function drawProjectionLines(ctx, canvas, bounds) {
+  if (!pcaResult || points.length < 3) return;
+  const { mean, eigvecs, eigvals } = pcaResult;
+  const v = eigvecs[0]; // PC1 direction
+
+  ctx.strokeStyle = 'rgba(196,30,30,0.15)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+
+  for (const p of points) {
+    const dx = p.x - mean[0];
+    const dy = p.y - mean[1];
+    const proj = dx * v[0] + dy * v[1];
+    const projX = mean[0] + proj * v[0];
+    const projY = mean[1] + proj * v[1];
+
+    const [px1, py1] = dataToCanvas(canvas, p.x, p.y, bounds);
+    const [px2, py2] = dataToCanvas(canvas, projX, projY, bounds);
+
+    ctx.beginPath();
+    ctx.moveTo(px1, py1);
+    ctx.lineTo(px2, py2);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+
+function drawMeanCross(ctx, canvas, mx, my, bounds) {
+  const [px, py] = dataToCanvas(canvas, mx, my, bounds);
+  const s = 8;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(px - s, py - s); ctx.lineTo(px + s, py + s);
+  ctx.moveTo(px + s, py - s); ctx.lineTo(px - s, py + s);
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = "11px 'IBM Plex Mono'";
+  ctx.fillText('mean', px + 12, py - 4);
+}
+
+// Pre-computed splatters so they don't flicker on every redraw
+const splattersOrig = Array.from({length: 5}, () => ({x: Math.random(), y: Math.random(), r: Math.random() * 40 + 10}));
+const splattersProj = Array.from({length: 5}, () => ({x: Math.random(), y: Math.random(), r: Math.random() * 40 + 10}));
+
+function drawSplatterDeco(ctx, w, h, splatters) {
+  ctx.fillStyle = 'rgba(196,30,30,0.03)';
+  for (const s of splatters) {
+    ctx.beginPath();
+    ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawOriginal() {
+  const rect = canvasOrig.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  if (w === 0 || h === 0) return;
+  ctxO.clearRect(0, 0, w, h);
+
+  const bounds = getDataBounds();
+  drawSplatterDeco(ctxO, w, h, splattersOrig);
+  drawGrid(ctxO, canvasOrig, bounds);
+  drawProjectionLines(ctxO, canvasOrig, bounds);
+  drawPoints(ctxO, canvasOrig, points, bounds);
+
+  if (pcaResult && points.length >= 2) {
+    const { mean, eigvecs, eigvals } = pcaResult;
+
+    // Draw mean
+    drawMeanCross(ctxO, canvasOrig, mean[0], mean[1], bounds);
+
+    // Draw eigenvectors scaled by sqrt(eigenvalue)
+    const scale1 = Math.sqrt(eigvals[0]) * 2;
+    const scale2 = Math.sqrt(eigvals[1]) * 2;
+
+    drawArrow(ctxO, canvasOrig, mean[0], mean[1],
+      eigvecs[0][0] * scale1, eigvecs[0][1] * scale1, bounds, '#ff2222', 3, 'PC1');
+    drawArrow(ctxO, canvasOrig, mean[0], mean[1],
+      eigvecs[1][0] * scale2, eigvecs[1][1] * scale2, bounds, '#882222', 2, 'PC2');
+
+    // Also draw negative directions (fainter)
+    drawArrow(ctxO, canvasOrig, mean[0], mean[1],
+      -eigvecs[0][0] * scale1, -eigvecs[0][1] * scale1, bounds, 'rgba(255,34,34,0.3)', 2);
+    drawArrow(ctxO, canvasOrig, mean[0], mean[1],
+      -eigvecs[1][0] * scale2, -eigvecs[1][1] * scale2, bounds, 'rgba(136,34,34,0.3)', 1);
+  }
+}
+
+function drawProjected() {
+  const rect = canvasProj.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  if (w === 0 || h === 0) return;
+  ctxP.clearRect(0, 0, w, h);
+
+  if (!pcaResult || points.length < 2) {
+    ctxP.fillStyle = '#333';
+    ctxP.font = "16px 'Special Elite', cursive";
+    ctxP.textAlign = 'center';
+    ctxP.fillText('add points & run PCA to see projection', w/2, h/2);
+    ctxP.textAlign = 'left';
+    return;
+  }
+
+  drawSplatterDeco(ctxP, w, h, splattersProj);
+
+  const projected = pcaResult.projected;
+  const projPts = projected.map(p => ({ x: p[0], y: p[1] }));
+
+  let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+  for (const p of projPts) {
+    if (p.x < xMin) xMin = p.x;
+    if (p.x > xMax) xMax = p.x;
+    if (p.y < yMin) yMin = p.y;
+    if (p.y > yMax) yMax = p.y;
+  }
+  const pad = Math.max(xMax - xMin, yMax - yMin) * 0.2 + 0.5;
+  const bounds = { xMin: xMin - pad, xMax: xMax + pad, yMin: yMin - pad, yMax: yMax + pad };
+
+  drawGrid(ctxP, canvasProj, bounds);
+
+  // Draw PC axes labels
+  ctxP.fillStyle = 'rgba(196,30,30,0.3)';
+  ctxP.font = "bold 14px 'IBM Plex Mono'";
+  ctxP.fillText('PC1 \u2192', w - 70, h - 15);
+  ctxP.save();
+  ctxP.translate(15, 60);
+  ctxP.rotate(-Math.PI/2);
+  ctxP.fillText('PC2 \u2192', 0, 0);
+  ctxP.restore();
+
+  // Draw projected points with color by PC1 value
+  const pc1Min = Math.min(...projected.map(p => p[0]));
+  const pc1Max = Math.max(...projected.map(p => p[0]));
+  const pc1Range = pc1Max - pc1Min || 1;
+
+  for (let i = 0; i < projPts.length; i++) {
+    const t = (projected[i][0] - pc1Min) / pc1Range;
+    const r = Math.round(80 + t * 175);
+    const g = Math.round(20 + (1-t) * 30);
+    const b = Math.round(20 + (1-t) * 30);
+    const [px, py] = dataToCanvas(canvasProj, projPts[i].x, projPts[i].y, bounds);
+    ctxP.beginPath();
+    ctxP.arc(px, py, 4, 0, Math.PI * 2);
+    ctxP.fillStyle = `rgba(${r},${g},${b},0.8)`;
+    ctxP.fill();
+  }
+
+  // Draw 1D projection on the bottom (PC1 only)
+  const barY = rect.height - 25;
+  ctxP.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctxP.lineWidth = 1;
+  ctxP.beginPath();
+  ctxP.moveTo(40, barY);
+  ctxP.lineTo(w - 40, barY);
+  ctxP.stroke();
+
+  for (let i = 0; i < projected.length; i++) {
+    const t = (projected[i][0] - pc1Min) / pc1Range;
+    const px = 40 + t * (w - 80);
+    const r = Math.round(80 + t * 175);
+    ctxP.beginPath();
+    ctxP.arc(px, barY, 3, 0, Math.PI * 2);
+    ctxP.fillStyle = `rgba(${r},20,20,0.6)`;
+    ctxP.fill();
+  }
+
+  ctxP.fillStyle = '#555';
+  ctxP.font = "11px 'Special Elite'";
+  ctxP.fillText('PC1 only (1D)', 40, barY + 15);
+}
+
+function drawAll() {
+  drawOriginal();
+  drawProjected();
+}
+
+// ==============================
+// PCA COMPUTATION
+// ==============================
+
+function computePCA() {
+  const n = points.length;
+  if (n < 2) { pcaResult = null; return; }
+
+  // Step 1: compute mean
+  let mx = 0, my = 0;
+  for (const p of points) { mx += p.x; my += p.y; }
+  mx /= n; my /= n;
+
+  // Step 1b: compute std
+  let sx = 0, sy = 0;
+  for (const p of points) {
+    sx += (p.x - mx) ** 2;
+    sy += (p.y - my) ** 2;
+  }
+  sx = Math.sqrt(sx / (n - 1)) || 1;
+  sy = Math.sqrt(sy / (n - 1)) || 1;
+
+  // Standardized data
+  const Xstd = points.map(p => [(p.x - mx) / sx, (p.y - my) / sy]);
+
+  // Step 2: covariance matrix (of standardized data)
+  let c00 = 0, c01 = 0, c11 = 0;
+  for (const [x, y] of Xstd) {
+    c00 += x * x;
+    c01 += x * y;
+    c11 += y * y;
+  }
+  c00 /= (n - 1); c01 /= (n - 1); c11 /= (n - 1);
+
+  // Step 3: eigenvalues and eigenvectors of 2x2 symmetric matrix
+  // Using analytical formula
+  const trace = c00 + c11;
+  const det = c00 * c11 - c01 * c01;
+  const disc = Math.sqrt(Math.max(0, trace * trace / 4 - det));
+  const lambda1 = trace / 2 + disc;
+  const lambda2 = trace / 2 - disc;
+
+  // Eigenvectors
+  let v1, v2;
+  if (Math.abs(c01) > 1e-10) {
+    v1 = [lambda1 - c11, c01];
+    v2 = [lambda2 - c11, c01];
+  } else {
+    v1 = c00 >= c11 ? [1, 0] : [0, 1];
+    v2 = c00 >= c11 ? [0, 1] : [1, 0];
+  }
+
+  // Normalize
+  const norm1 = Math.sqrt(v1[0]**2 + v1[1]**2);
+  const norm2 = Math.sqrt(v2[0]**2 + v2[1]**2);
+  v1 = [v1[0]/norm1, v1[1]/norm1];
+  v2 = [v2[0]/norm2, v2[1]/norm2];
+
+  // Eigenvectors need to be in original (non-standardized) data space for visualization
+  // Scale back: the eigenvectors in standardized space need to be transformed
+  const v1_orig = [v1[0] * sx, v1[1] * sy];
+  const v2_orig = [v2[0] * sx, v2[1] * sy];
+  const n1 = Math.sqrt(v1_orig[0]**2 + v1_orig[1]**2);
+  const n2 = Math.sqrt(v2_orig[0]**2 + v2_orig[1]**2);
+  const v1_norm = [v1_orig[0]/n1, v1_orig[1]/n1];
+  const v2_norm = [v2_orig[0]/n2, v2_orig[1]/n2];
+
+  // Step 5: project standardized data
+  const projected = Xstd.map(([x, y]) => [
+    x * v1[0] + y * v1[1],
+    x * v2[0] + y * v2[1]
+  ]);
+
+  // Variance explained
+  const totalVar = lambda1 + lambda2;
+  const varExplained1 = totalVar > 0 ? lambda1 / totalVar * 100 : 50;
+  const varExplained2 = totalVar > 0 ? lambda2 / totalVar * 100 : 50;
+
+  pcaResult = {
+    mean: [mx, my],
+    std: [sx, sy],
+    covMatrix: [[c00, c01], [c01, c11]],
+    eigvals: [lambda1, lambda2],
+    eigvecs: [v1_norm, v2_norm],  // in original data space (for drawing arrows)
+    eigvecs_std: [v1, v2],        // in standardized space (for formulas)
+    projected,
+    varExplained: [varExplained1, varExplained2],
+    Xstd
+  };
+}
+
+function runPCA() {
+  computePCA();
+  drawAll();
+  updateInfoPanel();
+  updateStepDetails();
+}
+
+function updateInfoPanel() {
+  document.getElementById('info-points').textContent = points.length;
+
+  if (pcaResult) {
+    document.getElementById('info-var1').textContent = pcaResult.varExplained[0].toFixed(1) + '%';
+    document.getElementById('info-var2').textContent = pcaResult.varExplained[1].toFixed(1) + '%';
+
+    const angle = Math.atan2(pcaResult.eigvecs[0][1], pcaResult.eigvecs[0][0]) * 180 / Math.PI;
+    document.getElementById('info-angle').textContent = angle.toFixed(1) + '\u00B0';
+
+    document.getElementById('var-fill-1').style.width = pcaResult.varExplained[0] + '%';
+    document.getElementById('var-fill-2').style.width = pcaResult.varExplained[1] + '%';
+    document.getElementById('var-val-1').textContent = pcaResult.varExplained[0].toFixed(1) + '%';
+    document.getElementById('var-val-2').textContent = pcaResult.varExplained[1].toFixed(1) + '%';
+  } else {
+    document.getElementById('info-var1').textContent = '--';
+    document.getElementById('info-var2').textContent = '--';
+    document.getElementById('info-angle').textContent = '--';
+  }
+}
+
+function updateStepDetails() {
+  if (!pcaResult) return;
+  const r = pcaResult;
+  const fmt = (v) => v.toFixed(4);
+
+  // Step 0: Standardization
+  document.getElementById('step-detail-0').textContent =
+    `mean = [${fmt(r.mean[0])}, ${fmt(r.mean[1])}]\n` +
+    `std  = [${fmt(r.std[0])}, ${fmt(r.std[1])}]\n\n` +
+    `X_std (first 5 rows):\n` +
+    r.Xstd.slice(0, 5).map(row => `  [${fmt(row[0])}, ${fmt(row[1])}]`).join('\n') +
+    (r.Xstd.length > 5 ? `\n  ... (${r.Xstd.length - 5} more rows)` : '');
+
+  // Step 1: Covariance
+  document.getElementById('step-detail-1').textContent =
+    `Covariance Matrix (2x2):\n` +
+    `  | ${fmt(r.covMatrix[0][0])}  ${fmt(r.covMatrix[0][1])} |\n` +
+    `  | ${fmt(r.covMatrix[1][0])}  ${fmt(r.covMatrix[1][1])} |`;
+
+  // Step 2: Eigen decomposition
+  document.getElementById('step-detail-2').textContent =
+    `Eigenvalues:\n` +
+    `  lambda_1 = ${fmt(r.eigvals[0])}\n` +
+    `  lambda_2 = ${fmt(r.eigvals[1])}\n\n` +
+    `Eigenvectors (standardized space):\n` +
+    `  v_1 = [${fmt(r.eigvecs_std[0][0])}, ${fmt(r.eigvecs_std[0][1])}]\n` +
+    `  v_2 = [${fmt(r.eigvecs_std[1][0])}, ${fmt(r.eigvecs_std[1][1])}]`;
+
+  // Step 3: Sort & select
+  document.getElementById('step-detail-3').textContent =
+    `Sorted eigenvalues: [${fmt(r.eigvals[0])}, ${fmt(r.eigvals[1])}]\n` +
+    `Variance explained: [${r.varExplained[0].toFixed(1)}%, ${r.varExplained[1].toFixed(1)}%]\n\n` +
+    `Projection matrix W (columns = top eigenvectors):\n` +
+    `  | ${fmt(r.eigvecs_std[0][0])}  ${fmt(r.eigvecs_std[1][0])} |\n` +
+    `  | ${fmt(r.eigvecs_std[0][1])}  ${fmt(r.eigvecs_std[1][1])} |`;
+
+  // Step 4: Projected data
+  document.getElementById('step-detail-4').textContent =
+    `X_reduced (first 5 rows):\n` +
+    r.projected.slice(0, 5).map(row => `  [${fmt(row[0])}, ${fmt(row[1])}]`).join('\n') +
+    (r.projected.length > 5 ? `\n  ... (${r.projected.length - 5} more rows)` : '');
+}
+
+function highlightStep(idx) {
+  for (let i = 0; i < 5; i++) {
+    document.getElementById(`step-${i}`).classList.toggle('active-step', i === idx);
+    const detail = document.getElementById(`step-detail-${i}`);
+    detail.style.display = (i === idx && pcaResult) ? 'block' : 'none';
+  }
+}
+
+// ==============================
+// INTERACTION
+// ==============================
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-draw').classList.toggle('active', m === 'draw');
+  document.getElementById('btn-drag').classList.toggle('active', m === 'drag');
+  canvasOrig.style.cursor = m === 'draw' ? 'crosshair' : 'grab';
+}
+
+// Interaction state
+let isDragging = false;
+let hasDragged = false;
+let dragOffset = [0, 0];
+
+canvasOrig.addEventListener('mousedown', (e) => {
+  const rect = canvasOrig.getBoundingClientRect();
+  if (mode === 'drag') {
+    isDragging = true;
+    hasDragged = false;
+    dragOffset = [e.clientX - rect.left, e.clientY - rect.top];
+    canvasOrig.style.cursor = 'grabbing';
+  }
+});
+
+canvasOrig.addEventListener('mousemove', (e) => {
+  const rect = canvasOrig.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  // Drag cloud
+  if (isDragging && mode === 'drag') {
+    hasDragged = true;
+    const [oldDataX, oldDataY] = canvasToData(canvasOrig, dragOffset[0], dragOffset[1]);
+    const [newDataX, newDataY] = canvasToData(canvasOrig, mx, my);
+    const dx = newDataX - oldDataX;
+    const dy = newDataY - oldDataY;
+    for (const p of points) { p.x += dx; p.y += dy; }
+    dragOffset = [mx, my];
+    runPCA();
+    return;
+  }
+
+  // Tooltip
+  const [x, y] = canvasToData(canvasOrig, mx, my);
+  const tooltip = document.getElementById('tooltip');
+  tooltip.style.display = 'block';
+  tooltip.style.left = (e.clientX + 15) + 'px';
+  tooltip.style.top = (e.clientY - 10) + 'px';
+  tooltip.textContent = `(${x.toFixed(2)}, ${y.toFixed(2)})`;
+});
+
+canvasOrig.addEventListener('mouseup', (e) => {
+  if (isDragging) {
+    isDragging = false;
+    if (mode === 'drag') canvasOrig.style.cursor = 'grab';
+    return; // don't place a point after dragging
+  }
+
+  // Draw mode: add point on click (mouseup without prior drag)
+  if (mode === 'draw') {
+    const rect = canvasOrig.getBoundingClientRect();
+    const [x, y] = canvasToData(canvasOrig, e.clientX - rect.left, e.clientY - rect.top);
+    points.push({ x, y });
+    runPCA();
+  }
+});
+
+canvasOrig.addEventListener('mouseleave', () => {
+  isDragging = false;
+  document.getElementById('tooltip').style.display = 'none';
+});
+
+// ==============================
+// PRESETS
+// ==============================
+
+function generatePoints(generator, n) {
+  points = [];
+  const noise = parseInt(document.getElementById('noise-slider').value) / 100;
+  for (let i = 0; i < n; i++) {
+    const [x, y] = generator(i, n, noise);
+    points.push({ x, y });
+  }
+  runPCA();
+}
+
+function updateNoise() {
+  document.getElementById('noise-val').textContent = document.getElementById('noise-slider').value;
+}
+
+function updateNPoints() {
+  document.getElementById('npoints-val').textContent = document.getElementById('npoints-slider').value;
+}
+
+function randN() { // Box-Muller
+  const u1 = Math.random(), u2 = Math.random();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+function loadPreset(name) {
+  const n = parseInt(document.getElementById('npoints-slider').value);
+
+  const presets = {
+    blob: (i, n, noise) => [
+      randN() * (1 + noise * 2),
+      randN() * (1 + noise * 2)
+    ],
+    elongated: (i, n, noise) => {
+      const angle = 0.7; // ~40 degrees
+      const x = randN() * 3;
+      const y = randN() * (0.3 + noise * 1.5);
+      return [
+        x * Math.cos(angle) - y * Math.sin(angle),
+        x * Math.sin(angle) + y * Math.cos(angle)
+      ];
+    },
+    L: (i, n, noise) => {
+      const noiseAmt = 0.2 + noise * 0.6;
+      if (i < n / 2) {
+        return [randN() * noiseAmt, Math.random() * 5];
+      } else {
+        return [Math.random() * 5, randN() * noiseAmt];
+      }
+    },
+    ring: (i, n, noise) => {
+      const angle = (i / n) * Math.PI * 2 + randN() * 0.1;
+      const r = 3 + randN() * (0.2 + noise * 1.2);
+      return [r * Math.cos(angle), r * Math.sin(angle)];
+    },
+    clusters: (i, n, noise) => {
+      const cluster = i % 3;
+      const centers = [[-3, 3], [3, 3], [0, -3]];
+      const spread = 0.5 + noise * 1.5;
+      return [
+        centers[cluster][0] + randN() * spread,
+        centers[cluster][1] + randN() * spread
+      ];
+    }
+  };
+
+  generatePoints(presets[name], n);
+}
+
+function clearAll() {
+  points = [];
+  pcaResult = null;
+  drawAll();
+  updateInfoPanel();
+  for (let i = 0; i < 5; i++) {
+    document.getElementById(`step-detail-${i}`).style.display = 'none';
+    document.getElementById(`step-${i}`).classList.remove('active-step');
+  }
+}
+
+// ==============================
+// AUTO-RUN PCA ON ANY CHANGE
+// ==============================
+
+// Start with a nice preset
+setTimeout(() => {
+  loadPreset('elongated');
+}, 200);
+
+// ==============================
+// TAB SWITCHING
+// ==============================
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('visible'));
+
+  if (tab === 'pca') {
+    document.querySelector('.tab-btn:nth-child(1)').classList.add('active-tab');
+    document.getElementById('tab-pca').classList.add('visible');
+    // Force a reflow so canvases have real dimensions before we measure
+    document.getElementById('tab-pca').offsetHeight;
+    requestAnimationFrame(() => initCanvases());
+  } else {
+    document.querySelector('.tab-btn:nth-child(2)').classList.add('active-tab');
+    document.getElementById('tab-variance').classList.add('visible');
+    document.getElementById('tab-variance').offsetHeight;
+    requestAnimationFrame(() => initVarDemoCanvases());
+  }
+}
+
+// ==============================
+// VARIANCE DEMO
+// ==============================
+
+let varDemoPoints = [];
+let varDemoPreset = 'medium';
+
+// Pre-compute the tilted cloud for the "Why PCA cares" demo
+const varPcaDemoCloud = (() => {
+  const pts = [];
+  const angle = 0.6;
+  // Simple seeded random for stability
+  let seed = 42;
+  function seededRand() { seed = (seed * 16807 + 0) % 2147483647; return seed / 2147483647; }
+  function seededRandN() {
+    const u1 = seededRand(), u2 = seededRand();
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  }
+  for (let i = 0; i < 40; i++) {
+    const x = seededRandN() * 2.5;
+    const y = seededRandN() * 0.6;
+    pts.push({
+      x: x * Math.cos(angle) - y * Math.sin(angle),
+      y: x * Math.sin(angle) + y * Math.cos(angle)
+    });
+  }
+  return pts;
+})();
+
+function randNVar() {
+  const u1 = Math.random(), u2 = Math.random();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+function generateVarDemoPoints() {
+  const spread = parseInt(document.getElementById('var-spread-slider').value) / 50;
+  varDemoPoints = [];
+  if (varDemoPreset === 'bimodal') {
+    for (let i = 0; i < 30; i++) {
+      const center = i < 15 ? -2 * spread : 2 * spread;
+      varDemoPoints.push(center + randNVar() * 0.5);
+    }
+  } else {
+    for (let i = 0; i < 30; i++) {
+      varDemoPoints.push(randNVar() * spread);
+    }
+  }
+}
+
+function setVarPreset(preset) {
+  varDemoPreset = preset;
+  const slider = document.getElementById('var-spread-slider');
+  if (preset === 'tight') slider.value = 10;
+  else if (preset === 'medium') slider.value = 40;
+  else if (preset === 'wide') slider.value = 85;
+  else if (preset === 'bimodal') slider.value = 50;
+  generateVarDemoPoints();
+  drawAllVarDemos();
+}
+
+function regenerateVarDemo() {
+  generateVarDemoPoints();
+  drawAllVarDemos();
+}
+
+function updateVarDemo() {
+  generateVarDemoPoints();
+  drawAllVarDemos();
+}
+
+function computeVarStats(data) {
+  const n = data.length;
+  if (n === 0) return { mean: 0, variance: 0, std: 0, deviations: [], sqDeviations: [] };
+  const mean = data.reduce((a, b) => a + b, 0) / n;
+  const deviations = data.map(x => x - mean);
+  const sqDeviations = deviations.map(d => d * d);
+  const variance = sqDeviations.reduce((a, b) => a + b, 0) / (n - 1);
+  const std = Math.sqrt(variance);
+  return { mean, variance, std, deviations, sqDeviations };
+}
+
+function initVarDemoCanvases() {
+  const demos = ['canvas-var-demo', 'canvas-var-why', 'canvas-var-pca'];
+  let allOk = true;
+  demos.forEach(id => {
+    const c = document.getElementById(id);
+    if (!c) return;
+    if (!setupCanvas(c)) allOk = false;
+  });
+  if (!allOk) return;
+  if (varDemoPoints.length === 0) generateVarDemoPoints();
+  drawAllVarDemos();
+}
+
+function drawAllVarDemos() {
+  drawVarDemoMain();
+  drawVarDemoWhy();
+  drawVarDemoPCA();
+}
+
+function drawVarDemoMain() {
+  const canvas = document.getElementById('canvas-var-demo');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+  const w = rect.width, h = rect.height;
+  ctx.clearRect(0, 0, w, h);
+
+  if (varDemoPoints.length === 0) return;
+  const stats = computeVarStats(varDemoPoints);
+
+  // Determine bounds
+  const allVals = varDemoPoints;
+  const dataMin = Math.min(...allVals) - 1;
+  const dataMax = Math.max(...allVals) + 1;
+  const range = dataMax - dataMin;
+  const margin = 50;
+
+  function valToX(v) { return margin + (v - dataMin) / range * (w - 2 * margin); }
+  const midY = h * 0.45;
+
+  // Draw axis
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(margin, midY + 40);
+  ctx.lineTo(w - margin, midY + 40);
+  ctx.stroke();
+
+  // Draw mean line
+  const meanX = valToX(stats.mean);
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(meanX, 20);
+  ctx.lineTo(meanX, midY + 50);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = "bold 12px 'IBM Plex Mono'";
+  ctx.textAlign = 'center';
+  ctx.fillText('MEAN', meanX, 15);
+
+  // Draw std dev range
+  const stdLeft = valToX(stats.mean - stats.std);
+  const stdRight = valToX(stats.mean + stats.std);
+  ctx.fillStyle = 'rgba(196,30,30,0.1)';
+  ctx.fillRect(stdLeft, 25, stdRight - stdLeft, midY + 20);
+  ctx.strokeStyle = 'rgba(196,30,30,0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(stdLeft, 25); ctx.lineTo(stdLeft, midY + 45);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(stdRight, 25); ctx.lineTo(stdRight, midY + 45);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = 'rgba(196,30,30,0.5)';
+  ctx.font = "11px 'Special Elite'";
+  ctx.fillText('-1 std', stdLeft, midY + 58);
+  ctx.fillText('+1 std', stdRight, midY + 58);
+
+  // Draw deviation lines and points
+  for (let i = 0; i < varDemoPoints.length; i++) {
+    const px = valToX(varDemoPoints[i]);
+    // Deviation line to mean
+    ctx.strokeStyle = 'rgba(196,30,30,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(px, midY);
+    ctx.lineTo(meanX, midY);
+    ctx.stroke();
+
+    // Point
+    ctx.beginPath();
+    ctx.arc(px, midY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(240,232,224,0.8)';
+    ctx.fill();
+  }
+
+  // Draw mean dot on top
+  ctx.beginPath();
+  ctx.arc(meanX, midY, 7, 0, Math.PI * 2);
+  ctx.fillStyle = '#ff2222';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Update stats display
+  document.getElementById('var-demo-mean').textContent = stats.mean.toFixed(3);
+  document.getElementById('var-demo-variance').textContent = stats.variance.toFixed(3);
+  document.getElementById('var-demo-std').textContent = stats.std.toFixed(3);
+
+  ctx.textAlign = 'left';
+}
+
+function drawVarDemoWhy() {
+  const canvas = document.getElementById('canvas-var-why');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  if (w === 0 || h === 0) return;
+  ctx.clearRect(0, 0, w, h);
+
+  // Use a small fixed set for clarity
+  const demoData = [-3, -1.5, -0.5, 0.5, 2, 2.5];
+  const stats = computeVarStats(demoData);
+
+  const margin = 60;
+  const dataMin = -5, dataMax = 5;
+  const range = dataMax - dataMin;
+  function valToX(v) { return margin + (v - dataMin) / range * (w - 2 * margin); }
+  const barY = h * 0.35;
+
+  // Axis
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(margin, barY + 25);
+  ctx.lineTo(w - margin, barY + 25);
+  ctx.stroke();
+
+  // Mean line
+  const meanX = valToX(stats.mean);
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(meanX, 10);
+  ctx.lineTo(meanX, barY + 30);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#888';
+  ctx.font = "11px 'IBM Plex Mono'";
+  ctx.textAlign = 'center';
+  ctx.fillText('mean=' + stats.mean.toFixed(2), meanX, 10);
+
+  // Draw each point with deviation
+  for (let i = 0; i < demoData.length; i++) {
+    const px = valToX(demoData[i]);
+    const dev = stats.deviations[i];
+    const isNeg = dev < 0;
+
+    // Deviation line
+    ctx.strokeStyle = isNeg ? 'rgba(100,150,255,0.6)' : 'rgba(255,50,50,0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px, barY);
+    ctx.lineTo(meanX, barY);
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = isNeg ? 'rgba(100,150,255,0.8)' : 'rgba(255,50,50,0.8)';
+    ctx.font = "bold 11px 'IBM Plex Mono'";
+    ctx.textAlign = 'center';
+    ctx.fillText((dev > 0 ? '+' : '') + dev.toFixed(1), (px + meanX) / 2, barY - 8);
+
+    // Point
+    ctx.beginPath();
+    ctx.arc(px, barY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(240,232,224,0.8)';
+    ctx.fill();
+  }
+
+  // Show squared deviations as little boxes below
+  const boxY = barY + 50;
+  ctx.font = "10px 'IBM Plex Mono'";
+  for (let i = 0; i < demoData.length; i++) {
+    const px = valToX(demoData[i]);
+    const sqDev = stats.sqDeviations[i];
+    const boxSize = Math.min(Math.sqrt(sqDev) * 12, 30);
+    ctx.fillStyle = 'rgba(196,30,30,0.3)';
+    ctx.fillRect(px - boxSize/2, boxY, boxSize, boxSize);
+    ctx.strokeStyle = 'rgba(196,30,30,0.6)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px - boxSize/2, boxY, boxSize, boxSize);
+    ctx.fillStyle = '#aaa';
+    ctx.textAlign = 'center';
+    ctx.fillText(sqDev.toFixed(1), px, boxY + boxSize + 12);
+  }
+
+  ctx.fillStyle = '#666';
+  ctx.font = "11px 'Special Elite'";
+  ctx.textAlign = 'left';
+  ctx.fillText('squared deviations (area = magnitude)', margin, boxY + 55);
+
+  // Update stats
+  const sumDev = stats.deviations.reduce((a, b) => a + b, 0);
+  const sumSqDev = stats.sqDeviations.reduce((a, b) => a + b, 0);
+  document.getElementById('var-sum-dev').textContent = sumDev.toFixed(4) + ' (cancels out!)';
+  document.getElementById('var-sum-sq-dev').textContent = sumSqDev.toFixed(2);
+
+  ctx.textAlign = 'left';
+}
+
+function drawVarDemoPCA() {
+  const canvas = document.getElementById('canvas-var-pca');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  if (w === 0 || h === 0) return;
+  ctx.clearRect(0, 0, w, h);
+
+  // Use pre-computed tilted cloud
+  const pts = varPcaDemoCloud;
+  const angle = 0.6;
+
+  const margin = 40;
+  let xMin = -6, xMax = 6, yMin = -4, yMax = 4;
+
+  function toX(v) { return margin + (v - xMin) / (xMax - xMin) * (w - 2 * margin); }
+  function toY(v) { return h - margin - (v - yMin) / (yMax - yMin) * (h - 2 * margin); }
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(toX(0), 0); ctx.lineTo(toX(0), h); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, toY(0)); ctx.lineTo(w, toY(0)); ctx.stroke();
+
+  // Draw points
+  for (const p of pts) {
+    ctx.beginPath();
+    ctx.arc(toX(p.x), toY(p.y), 3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(240,232,224,0.5)';
+    ctx.fill();
+  }
+
+  // Draw PC1 direction (high variance)
+  const dx1 = Math.cos(angle) * 5;
+  const dy1 = Math.sin(angle) * 5;
+  ctx.strokeStyle = '#ff2222';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(toX(-dx1), toY(-dy1));
+  ctx.lineTo(toX(dx1), toY(dy1));
+  ctx.stroke();
+
+  // Draw PC2 direction (low variance)
+  const dx2 = -Math.sin(angle) * 5;
+  const dy2 = Math.cos(angle) * 5;
+  ctx.strokeStyle = '#661111';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(toX(-dx2*0.4), toY(-dy2*0.4));
+  ctx.lineTo(toX(dx2*0.4), toY(dy2*0.4));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Labels
+  ctx.fillStyle = '#ff2222';
+  ctx.font = "bold 13px 'IBM Plex Mono'";
+  ctx.fillText('PC1 (high var)', toX(dx1) + 5, toY(dy1) - 5);
+  ctx.fillStyle = '#661111';
+  ctx.font = "12px 'IBM Plex Mono'";
+  ctx.fillText('PC2 (low var)', toX(dx2*0.4) + 5, toY(dy2*0.4) - 5);
+
+  // Arrow annotation
+  ctx.fillStyle = '#555';
+  ctx.font = "11px 'Special Elite'";
+  ctx.fillText('most spread = most info = PC1', margin, h - 10);
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 3 - Neural Networks &amp; Backpropagation</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#1a1a2e;--bg2:#16213e;--bg3:#0f3460;--card:#1e2746;--card2:#243054;
+  --text:#e0e0e0;--text2:#a0a0b8;--accent-blue:#4fc3f7;--accent-green:#66bb6a;
+  --accent-orange:#ffa726;--accent-purple:#ab47bc;--accent-red:#ef5350;--accent-teal:#26a69a;
+  --accent-yellow:#ffee58;--accent-pink:#ec407a;
+  --radius:10px;--shadow:0 4px 20px rgba(0,0,0,.3);
+}
+html{scroll-behavior:smooth;font-size:16px;}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6;}
+.container{max-width:1100px;margin:0 auto;padding:30px 36px 80px;}
+h1{font-size:2rem;margin-bottom:8px;color:#fff;}
+h3{font-size:1.4rem;margin-bottom:16px;color:#fff;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+h3 .badge{font-size:.7rem;padding:3px 10px;border-radius:20px;color:#fff;font-weight:600;}
+h4{font-size:1.05rem;margin:18px 0 10px;color:var(--text);}
+p,.desc{color:var(--text2);margin-bottom:14px;font-size:.95rem;}
+.card{background:var(--card);border-radius:var(--radius);padding:24px;margin-bottom:20px;box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.04);overflow:hidden;}
+.card2{background:var(--card2);border-radius:var(--radius);padding:14px;margin-bottom:10px;}
+.tabs{display:flex;gap:4px;margin-bottom:24px;flex-wrap:wrap;}
+.tab{padding:12px 28px;border-radius:8px 8px 0 0;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .2s;border:1px solid rgba(255,255,255,.08);border-bottom:none;color:var(--text2);background:var(--card2);}
+.tab:hover{color:#fff;background:rgba(255,255,255,.06);}
+.tab.active{color:var(--accent-blue);background:var(--card);border-color:var(--accent-blue);border-bottom:2px solid var(--card);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+@media(max-width:900px){.grid2,.grid3,.grid4,.grid5{grid-template-columns:1fr;}}
+.slider-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.slider-row .slider-label{min-width:42px;font-size:.85rem;color:var(--text2);font-weight:600;}
+.slider-row .slider-value{min-width:48px;text-align:right;font-size:.85rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text);}
+.slider-row input[type=range]{flex:1;min-width:80px;accent-color:var(--accent-blue);}
+button{background:var(--accent-blue);color:#000;border:none;border-radius:6px;padding:8px 18px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;}
+button:hover{filter:brightness(1.15);transform:translateY(-1px);}
+button.green{background:var(--accent-green);}
+button.orange{background:var(--accent-orange);}
+button.purple{background:var(--accent-purple);color:#fff;}
+button.red{background:var(--accent-red);color:#fff;}
+button.teal{background:var(--accent-teal);color:#fff;}
+button.sm{padding:5px 12px;font-size:.8rem;}
+button.outline{background:transparent;border:2px solid var(--accent-blue);color:var(--accent-blue);}
+.info-box{border-radius:8px;padding:14px 18px;margin:12px 0;font-size:.9rem;line-height:1.5;}
+.info-box.info{border-left:4px solid var(--accent-blue);background:rgba(79,195,247,.06);}
+.info-box.success{border-left:4px solid var(--accent-green);background:rgba(102,187,106,.06);}
+.info-box.warning{border-left:4px solid var(--accent-orange);background:rgba(255,167,38,.06);}
+.info-box.error{border-left:4px solid var(--accent-red);background:rgba(239,83,80,.06);}
+.step-box{display:none;background:var(--card2);border-left:3px solid var(--accent-orange);padding:12px 16px;margin-bottom:8px;border-radius:0 8px 8px 0;font-size:.88rem;}
+.step-box.visible{display:block;}
+.step-box.active-step{border-left-color:var(--accent-green);background:rgba(102,187,106,.06);}
+canvas{border-radius:var(--radius);display:block;background:#111827;}
+.toggle-btn{padding:6px 14px;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;border:2px solid;background:transparent;transition:all .2s;opacity:.5;}
+.toggle-btn.on{opacity:1;}
+.color-dLdy{color:#ef5350;}
+.color-dydz{color:#ffa726;}
+.color-dzdw{color:#4fc3f7;}
+.quiz-q{font-size:.95rem;font-weight:600;margin-bottom:10px;color:#fff;}
+.quiz-option{padding:10px 16px;border-radius:8px;margin-bottom:6px;cursor:pointer;border:2px solid rgba(255,255,255,.08);background:var(--card2);transition:all .2s;font-size:.88rem;}
+.quiz-option:hover:not(.locked){border-color:var(--accent-blue);background:rgba(79,195,247,.08);}
+.quiz-option.right{border-color:var(--accent-green);background:rgba(102,187,106,.12);cursor:default;}
+.quiz-option.wrong{border-color:var(--accent-red);background:rgba(239,83,80,.08);cursor:default;}
+.quiz-option.locked{cursor:default;opacity:.7;}
+.quiz-feedback{margin-top:8px;padding:8px 12px;border-radius:6px;font-size:.85rem;display:none;}
+.quiz-feedback.show{display:block;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;}
+.weight-input{background:var(--card2);border:1px solid rgba(255,255,255,.15);color:var(--text);padding:4px 8px;border-radius:4px;width:60px;text-align:center;font-size:.85rem;}
+.chain-card{background:var(--card2);border-radius:8px;padding:12px;text-align:center;font-size:.82rem;}
+.chain-card .chain-val{font-size:1.1rem;font-weight:700;margin:4px 0;}
+.chain-card .chain-desc{font-size:.75rem;color:var(--text2);}
+.stat-label{font-size:.78rem;color:var(--text2);}
+.stat-val{font-size:1.1rem;font-weight:700;}
+table.grad-table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:10px;}
+table.grad-table th,table.grad-table td{padding:6px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);}
+table.grad-table th{color:var(--text2);font-weight:600;}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Neural Networks & Backpropagation</h1>
+<p>Week 3 - Interactive Playground for CSDS-352 Data Science</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('activations')">Activations</div>
+  <div class="tab" onclick="switchTab('forward')">Forward Pass</div>
+  <div class="tab" onclick="switchTab('backprop')">Backpropagation</div>
+  <div class="tab" onclick="switchTab('training')">Training Live</div>
+  <div class="tab" onclick="switchTab('quiz')">Knowledge Check</div>
+</div>
+
+<!-- ==================== TAB 1: ACTIVATIONS ==================== -->
+<div id="tab-activations" class="tab-content active">
+<h3>Activation Functions <span class="badge" style="background:var(--accent-blue)">Interactive</span></h3>
+<div class="card">
+  <div class="btn-row" id="act-toggles">
+    <button class="toggle-btn on" style="border-color:var(--accent-red);color:var(--accent-red);" onclick="toggleAct('step',this)">Step</button>
+    <button class="toggle-btn on" style="border-color:var(--accent-blue);color:var(--accent-blue);" onclick="toggleAct('sigmoid',this)">Sigmoid</button>
+    <button class="toggle-btn on" style="border-color:var(--accent-green);color:var(--accent-green);" onclick="toggleAct('tanh',this)">Tanh</button>
+    <button class="toggle-btn on" style="border-color:var(--accent-orange);color:var(--accent-orange);" onclick="toggleAct('relu',this)">ReLU</button>
+    <label style="display:flex;align-items:center;gap:6px;margin-left:12px;font-size:.85rem;color:var(--text2);cursor:pointer;">
+      <input type="checkbox" id="show-deriv" onchange="drawActivations()"> Show derivatives
+    </label>
+  </div>
+  <div class="slider-row">
+    <span class="slider-label">x</span>
+    <input type="range" id="act-x" min="-5" max="5" step="0.05" value="0.5" oninput="drawActivations()">
+    <span class="slider-value" id="act-x-val">0.50</span>
+  </div>
+  <canvas id="act-canvas" width="900" height="380"></canvas>
+</div>
+<div class="grid2" id="act-cards"></div>
+<div class="info-box warning">
+  <strong>Vanishing Gradients:</strong> Notice how the sigmoid and tanh derivatives approach 0 for large |x|. This causes gradients to shrink exponentially in deep networks, making early layers learn very slowly. ReLU mitigates this for positive values but can suffer from "dead neurons" when x &lt; 0.
+</div>
+</div>
+
+<!-- ==================== TAB 2: FORWARD PASS ==================== -->
+<div id="tab-forward" class="tab-content">
+<h3>Forward Pass (2-1-1 Network) <span class="badge" style="background:var(--accent-green)">Step-by-Step</span></h3>
+<div class="card">
+  <div class="grid2" style="margin-bottom:12px;">
+    <div>
+      <div class="slider-row">
+        <span class="slider-label">x&#8321;</span>
+        <input type="range" id="fp-x1" min="-2" max="2" step="0.1" value="0.5" oninput="fpChanged()">
+        <span class="slider-value" id="fp-x1-val">0.50</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">x&#8322;</span>
+        <input type="range" id="fp-x2" min="-2" max="2" step="0.1" value="-0.3" oninput="fpChanged()">
+        <span class="slider-value" id="fp-x2-val">-0.30</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:.82rem;">
+      <div>w&#8321; <input class="weight-input" id="fp-w1" value="0.8" onchange="fpChanged()"></div>
+      <div>w&#8322; <input class="weight-input" id="fp-w2" value="-0.5" onchange="fpChanged()"></div>
+      <div>b&#8321; <input class="weight-input" id="fp-b1" value="0.1" onchange="fpChanged()"></div>
+      <div>w&#8323; <input class="weight-input" id="fp-w3" value="0.6" onchange="fpChanged()"></div>
+      <div>b&#8322; <input class="weight-input" id="fp-b2" value="-0.2" onchange="fpChanged()"></div>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button onclick="fpNext()">Next Step</button>
+    <button class="green" onclick="fpShowAll()">Show All</button>
+    <button class="red sm" onclick="fpReset()">Reset</button>
+  </div>
+  <canvas id="fp-canvas" width="900" height="300"></canvas>
+</div>
+<div id="fp-steps">
+  <div class="step-box" id="fp-step-1"><strong>Step 1: Compute z&#8321;</strong><br><span id="fp-s1-math"></span></div>
+  <div class="step-box" id="fp-step-2"><strong>Step 2: Activation a&#8321; = sigmoid(z&#8321;)</strong><br><span id="fp-s2-math"></span></div>
+  <div class="step-box" id="fp-step-3"><strong>Step 3: Compute z&#8322;</strong><br><span id="fp-s3-math"></span></div>
+  <div class="step-box" id="fp-step-4"><strong>Step 4: Output y&#770; = sigmoid(z&#8322;)</strong><br><span id="fp-s4-math"></span></div>
+</div>
+</div>
+
+<!-- ==================== TAB 3: BACKPROPAGATION ==================== -->
+<div id="tab-backprop" class="tab-content">
+<h3>Backpropagation (2-1-1 Network) <span class="badge" style="background:var(--accent-orange)">Main</span></h3>
+<div class="card">
+  <div class="grid2" style="margin-bottom:12px;">
+    <div>
+      <div class="slider-row">
+        <span class="slider-label">x&#8321;</span>
+        <input type="range" id="bp-x1" min="-2" max="2" step="0.1" value="1.0" oninput="bpInputChanged()">
+        <span class="slider-value" id="bp-x1-val">1.00</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">x&#8322;</span>
+        <input type="range" id="bp-x2" min="-2" max="2" step="0.1" value="0.5" oninput="bpInputChanged()">
+        <span class="slider-value" id="bp-x2-val">0.50</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">target</span>
+        <input type="range" id="bp-target" min="0" max="1" step="0.1" value="1.0" oninput="bpInputChanged()">
+        <span class="slider-value" id="bp-target-val">1.00</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">lr (&#945;)</span>
+        <input type="range" id="bp-lr" min="0.01" max="2" step="0.01" value="0.5" oninput="bpInputChanged()">
+        <span class="slider-value" id="bp-lr-val">0.50</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:.82rem;">
+      <div>w&#8321; <input class="weight-input" id="bp-w1" value="0.8" onchange="bpInputChanged()"></div>
+      <div>w&#8322; <input class="weight-input" id="bp-w2" value="-0.5" onchange="bpInputChanged()"></div>
+      <div>b&#8321; <input class="weight-input" id="bp-b1" value="0.1" onchange="bpInputChanged()"></div>
+      <div>w&#8323; <input class="weight-input" id="bp-w3" value="0.6" onchange="bpInputChanged()"></div>
+      <div>b&#8322; <input class="weight-input" id="bp-b2" value="-0.2" onchange="bpInputChanged()"></div>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button onclick="bpNext()">Next Step</button>
+    <button class="green" onclick="bpShowAll()">Show All Steps</button>
+    <button class="orange" onclick="bpTrainOne()">Train 1 Epoch</button>
+    <button class="purple" onclick="bpTrain100()">Train 100 Epochs</button>
+    <button class="red sm" onclick="bpReset()">Reset</button>
+  </div>
+  <canvas id="bp-canvas" width="900" height="300"></canvas>
+</div>
+
+<div class="grid2">
+  <div>
+    <div class="step-box" id="bp-step-1"><strong>Step 1: Forward Pass</strong><br><span id="bp-s1-math"></span></div>
+    <div class="step-box" id="bp-step-2"><strong>Step 2: Compute Loss (BCE)</strong><br><span id="bp-s2-math"></span></div>
+    <div class="step-box" id="bp-step-3"><strong>Step 3: Output Layer Gradients</strong><br><span id="bp-s3-math"></span></div>
+    <div class="step-box" id="bp-step-4"><strong>Step 4: Hidden Layer Gradients</strong><br><span id="bp-s4-math"></span></div>
+    <div class="step-box" id="bp-step-5"><strong>Step 5: Weight Update</strong><br><span id="bp-s5-math"></span></div>
+  </div>
+  <div>
+    <canvas id="bp-loss-canvas" width="450" height="260"></canvas>
+    <div class="card2" style="margin-top:10px;">
+      <div class="grid3" style="text-align:center;">
+        <div><span class="stat-label">Epoch</span><br><span class="stat-val" id="bp-epoch">0</span></div>
+        <div><span class="stat-label">Loss</span><br><span class="stat-val" id="bp-loss-val">-</span></div>
+        <div><span class="stat-label">y&#770;</span><br><span class="stat-val" id="bp-yhat-val">-</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" id="bp-chain-card" style="display:none;">
+  <h4>Chain Rule Decomposition</h4>
+  <div style="margin-bottom:16px;">
+    <p style="font-size:.82rem;color:var(--accent-orange);font-weight:600;margin-bottom:6px;">OUTPUT LAYER -- short chain</p>
+    <div id="bp-chain-output-formula" style="margin-bottom:8px;"></div>
+    <div class="grid3" id="bp-chain-output-cards"></div>
+    <div id="bp-chain-output-product" style="margin-top:8px;font-size:.88rem;"></div>
+  </div>
+  <div style="margin-bottom:16px;">
+    <p style="font-size:.82rem;color:var(--accent-purple);font-weight:600;margin-bottom:6px;">HIDDEN LAYER -- longer chain</p>
+    <div id="bp-chain-hidden-formula" style="margin-bottom:8px;"></div>
+    <div class="grid5" id="bp-chain-hidden-cards"></div>
+    <div id="bp-chain-hidden-product" style="margin-top:8px;font-size:.88rem;"></div>
+  </div>
+  <div>
+    <p style="font-size:.82rem;color:var(--accent-teal);font-weight:600;margin-bottom:6px;">ALL GRADIENTS</p>
+    <table class="grad-table" id="bp-grad-table">
+      <thead><tr><th>Parameter</th><th>Value</th><th>Gradient</th><th>Direction</th></tr></thead>
+      <tbody id="bp-grad-tbody"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ==================== TAB 4: TRAINING LIVE ==================== -->
+<div id="tab-training" class="tab-content">
+<h3>Training Live: XOR Network (2-4-1) <span class="badge" style="background:var(--accent-purple)">Real-Time</span></h3>
+<div class="card">
+  <div class="grid2" style="margin-bottom:12px;">
+    <div>
+      <div class="slider-row">
+        <span class="slider-label">LR</span>
+        <input type="range" id="tr-lr" min="0.05" max="3" step="0.05" value="1.0" oninput="document.getElementById('tr-lr-val').textContent=parseFloat(this.value).toFixed(2)">
+        <span class="slider-value" id="tr-lr-val">1.00</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Speed</span>
+        <input type="range" id="tr-speed" min="1" max="100" step="1" value="10" oninput="document.getElementById('tr-speed-val').textContent=this.value">
+        <span class="slider-value" id="tr-speed-val">10</span>
+      </div>
+    </div>
+    <div class="btn-row" style="align-items:center;">
+      <button class="green" id="tr-play-btn" onclick="trTogglePlay()">Play</button>
+      <button class="red sm" onclick="trReset()">Reset</button>
+    </div>
+  </div>
+  <div class="grid2">
+    <div>
+      <canvas id="tr-boundary-canvas" width="450" height="400"></canvas>
+    </div>
+    <div>
+      <canvas id="tr-loss-canvas" width="450" height="260"></canvas>
+      <div class="card2" style="margin-top:10px;">
+        <div class="grid3" style="text-align:center;">
+          <div><span class="stat-label">Epoch</span><br><span class="stat-val" id="tr-epoch">0</span></div>
+          <div><span class="stat-label">Loss</span><br><span class="stat-val" id="tr-loss-val">-</span></div>
+          <div><span class="stat-label">Accuracy</span><br><span class="stat-val" id="tr-acc-val">-</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ==================== TAB 5: QUIZ ==================== -->
+<div id="tab-quiz" class="tab-content">
+<h3>Knowledge Check <span class="badge" style="background:var(--accent-teal)">8 Questions</span></h3>
+<div id="quiz-container"></div>
+<div class="card" id="quiz-score-card" style="display:none;text-align:center;">
+  <h4>Your Score</h4>
+  <p style="font-size:2rem;font-weight:700;" id="quiz-score-text"></p>
+</div>
+</div>
+
+</div><!-- container -->
+
+<script>
+// ============================================================
+//  GLOBALS & UTILITIES
+// ============================================================
+let katexReady = false;
+window.addEventListener('load', () => {
+  if (typeof renderMathInElement === 'function') {
+    renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});
+  }
+  katexReady = true;
+  drawActivations();
+});
+
+function tex(str, display=false) {
+  if (katexReady && typeof katex !== 'undefined') {
+    try { return katex.renderToString(str, {displayMode:display, throwOnError:false}); } catch(e){}
+  }
+  return (display ? '$$'+str+'$$' : '$'+str+'$');
+}
+
+function sigmoid(x) { return 1/(1+Math.exp(-x)); }
+function sigmoidDeriv(x) { const s=sigmoid(x); return s*(1-s); }
+function tanhFn(x) { return Math.tanh(x); }
+function tanhDeriv(x) { const t=Math.tanh(x); return 1-t*t; }
+function relu(x) { return Math.max(0,x); }
+function reluDeriv(x) { return x>0?1:0; }
+function stepFn(x) { return x>=0?1:0; }
+function stepDeriv(x) { return 0; }
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+function fmt(v,d=4){return Number(v).toFixed(d);}
+function fmt2(v){return Number(v).toFixed(2);}
+
+// ============================================================
+//  CANVAS SETUP UTILITY
+// ============================================================
+function setupCanvas(canvas, desiredW, desiredH) {
+  const parent = canvas.parentElement;
+  const rect = parent.getBoundingClientRect();
+  let w = rect.width > 0 ? rect.width - 2 : desiredW;
+  const aspect = desiredH / desiredW;
+  let h = w * aspect;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return {ctx, w, h};
+}
+
+// ============================================================
+//  TAB SWITCHING
+// ============================================================
+const tabNames = ['activations','forward','backprop','training','quiz'];
+const tabDrawn = {activations:true, forward:false, backprop:false, training:false, quiz:false};
+
+function switchTab(name) {
+  tabNames.forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===name);
+  });
+  document.querySelectorAll('.tabs .tab').forEach((el,i) => {
+    el.classList.toggle('active', tabNames[i]===name);
+  });
+  requestAnimationFrame(() => {
+    if (!tabDrawn[name]) {
+      tabDrawn[name] = true;
+      if (name==='activations') drawActivations();
+      else if (name==='forward') { fpChanged(); drawFPCanvas(); }
+      else if (name==='backprop') { bpInputChanged(); drawBPCanvas(); drawBPLoss(); }
+      else if (name==='training') { trReset(); }
+    } else {
+      if (name==='activations') drawActivations();
+      else if (name==='forward') drawFPCanvas();
+      else if (name==='backprop') { drawBPCanvas(); drawBPLoss(); }
+      else if (name==='training') drawTrBoundary();
+    }
+  });
+}
+
+// ============================================================
+//  SHARED NETWORK DRAWING
+// ============================================================
+function drawNetwork(ctx, w, h, nodes, edges, opts={}) {
+  const R = opts.radius || 25;
+  ctx.clearRect(0,0,w,h);
+
+  // Draw edges
+  edges.forEach(e => {
+    const n1 = nodes[e.from], n2 = nodes[e.to];
+    const x1 = n1.x + R, y1 = n1.y;
+    const x2 = n2.x - R, y2 = n2.y;
+    const weight = e.weight;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = weight >= 0 ? 'rgba(102,187,106,.6)' : 'rgba(239,83,80,.6)';
+    ctx.lineWidth = clamp(Math.abs(weight)*3, 1, 6);
+    ctx.stroke();
+    // weight label
+    const mx = (x1+x2)/2, my = (y1+y2)/2;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.font = '11px "Segoe UI",sans-serif';
+    ctx.fillStyle = '#a0a0b8';
+    if (e.label) ctx.fillText(e.label, mx, my - 4);
+    ctx.restore();
+  });
+
+  // Draw gradient arrows if provided
+  if (opts.gradientArrows) {
+    opts.gradientArrows.forEach(ga => {
+      const n1 = nodes[ga.from], n2 = nodes[ga.to];
+      const x1 = n1.x - R - 4, y1 = n1.y;
+      const x2 = n2.x + R + 4, y2 = n2.y;
+      ctx.save();
+      ctx.setLineDash([5,4]);
+      ctx.strokeStyle = ga.color || '#ef5350';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      // arrowhead
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - 10*Math.cos(angle - .35), y2 - 10*Math.sin(angle - .35));
+      ctx.lineTo(x2 - 10*Math.cos(angle + .35), y2 - 10*Math.sin(angle + .35));
+      ctx.closePath();
+      ctx.fillStyle = ga.color || '#ef5350';
+      ctx.fill();
+      // label
+      const mx = (x1+x2)/2, my = (y1+y2)/2;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.font = '10px "Segoe UI",sans-serif';
+      ctx.fillStyle = ga.color || '#ef5350';
+      if (ga.label) ctx.fillText(ga.label, mx, my + 6);
+      ctx.restore();
+    });
+  }
+
+  // Draw nodes
+  nodes.forEach((n, i) => {
+    ctx.save();
+    // glow for active node
+    if (opts.activeNode === i) {
+      ctx.shadowColor = '#ffee58';
+      ctx.shadowBlur = 18;
+    }
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, R, 0, Math.PI*2);
+    ctx.fillStyle = '#111827';
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = n.color || '#4fc3f7';
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    // label above
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.font = 'bold 12px "Segoe UI",sans-serif';
+    ctx.fillStyle = n.color || '#4fc3f7';
+    ctx.fillText(n.label || '', n.x, n.y - R - 5);
+    // value inside
+    ctx.textBaseline = 'middle';
+    ctx.font = '12px "Segoe UI",sans-serif';
+    ctx.fillStyle = '#e0e0e0';
+    if (n.value !== undefined && n.value !== null) {
+      ctx.fillText(fmt2(n.value), n.x, n.y);
+    }
+    // z value below
+    if (n.zValue !== undefined && n.zValue !== null) {
+      ctx.textBaseline = 'top';
+      ctx.font = '10px "Segoe UI",sans-serif';
+      ctx.fillStyle = '#a0a0b8';
+      ctx.fillText('z=' + fmt2(n.zValue), n.x, n.y + R + 4);
+    }
+    ctx.restore();
+  });
+
+  // Bias labels
+  if (opts.biases) {
+    opts.biases.forEach(b => {
+      const n = nodes[b.nodeIdx];
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.font = '10px "Segoe UI",sans-serif';
+      ctx.fillStyle = '#a0a0b8';
+      const yoff = n.zValue !== undefined && n.zValue !== null ? R + 18 : R + 4;
+      ctx.fillText(b.label, n.x, n.y + yoff);
+      ctx.restore();
+    });
+  }
+
+  // Layer labels
+  if (opts.layerLabels) {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.font = 'bold 12px "Segoe UI",sans-serif';
+    ctx.fillStyle = '#a0a0b8';
+    opts.layerLabels.forEach(ll => {
+      ctx.fillText(ll.text, ll.x, h - 8);
+    });
+    ctx.restore();
+  }
+}
+
+// ============================================================
+//  TAB 1: ACTIVATIONS
+// ============================================================
+const actState = { step:true, sigmoid:true, tanh:true, relu:true };
+const actColors = { step:'#ef5350', sigmoid:'#4fc3f7', tanh:'#66bb6a', relu:'#ffa726' };
+const actFns = {
+  step: {fn:stepFn, deriv:stepDeriv, formula:'f(x) = \\begin{cases}1 & x \\ge 0 \\\\ 0 & x < 0\\end{cases}'},
+  sigmoid: {fn:sigmoid, deriv:sigmoidDeriv, formula:'f(x)=\\frac{1}{1+e^{-x}}'},
+  tanh: {fn:tanhFn, deriv:tanhDeriv, formula:'f(x)=\\tanh(x)'},
+  relu: {fn:relu, deriv:reluDeriv, formula:'f(x)=\\max(0,x)'}
+};
+
+function toggleAct(name, btn) {
+  actState[name] = !actState[name];
+  btn.classList.toggle('on', actState[name]);
+  drawActivations();
+}
+
+function drawActivations() {
+  const canvas = document.getElementById('act-canvas');
+  const {ctx,w,h} = setupCanvas(canvas, 900, 380);
+  const x = parseFloat(document.getElementById('act-x').value);
+  document.getElementById('act-x-val').textContent = fmt2(x);
+  const showDeriv = document.getElementById('show-deriv').checked;
+
+  // axes
+  const padL = w*0.08, padR = w*0.04, padT = h*0.08, padB = h*0.08;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const xMin=-5, xMax=5, yMin=-1.5, yMax=1.5;
+  const toX = v => padL + (v-xMin)/(xMax-xMin)*plotW;
+  const toY = v => padT + (yMax-v)/(yMax-yMin)*plotH;
+
+  // grid
+  ctx.strokeStyle = 'rgba(255,255,255,.06)';
+  ctx.lineWidth = 1;
+  for (let gx=-4; gx<=4; gx++) { ctx.beginPath(); ctx.moveTo(toX(gx),padT); ctx.lineTo(toX(gx),h-padB); ctx.stroke(); }
+  for (let gy=-1; gy<=1; gy++) { ctx.beginPath(); ctx.moveTo(padL,toY(gy)); ctx.lineTo(w-padR,toY(gy)); ctx.stroke(); }
+
+  // axes
+  ctx.strokeStyle = 'rgba(255,255,255,.2)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(toX(xMin),toY(0)); ctx.lineTo(toX(xMax),toY(0)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(toX(0),toY(yMin)); ctx.lineTo(toX(0),toY(yMax)); ctx.stroke();
+
+  // axis labels
+  ctx.fillStyle = '#666';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (let gx=-4; gx<=4; gx+=2) ctx.fillText(gx, toX(gx), toY(0)+4);
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let gy=-1; gy<=1; gy++) ctx.fillText(gy, toX(0)-6, toY(gy));
+
+  // draw curves
+  const step = 0.05;
+  Object.keys(actFns).forEach(name => {
+    if (!actState[name]) return;
+    const {fn, deriv} = actFns[name];
+    const color = actColors[name];
+    // main curve
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    for (let px=xMin; px<=xMax; px+=step) {
+      const py = clamp(fn(px), yMin, yMax);
+      px===xMin ? ctx.moveTo(toX(px),toY(py)) : ctx.lineTo(toX(px),toY(py));
+    }
+    ctx.stroke();
+    // derivative
+    if (showDeriv) {
+      ctx.beginPath();
+      ctx.setLineDash([5,4]);
+      ctx.strokeStyle = color + '88';
+      ctx.lineWidth = 1.5;
+      for (let px=xMin; px<=xMax; px+=step) {
+        const py = clamp(deriv(px), yMin, yMax);
+        px===xMin ? ctx.moveTo(toX(px),toY(py)) : ctx.lineTo(toX(px),toY(py));
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // dot at current x
+    const fy = fn(x);
+    ctx.beginPath();
+    ctx.arc(toX(x), toY(clamp(fy,yMin,yMax)), 5, 0, Math.PI*2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    // value label
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillStyle = color;
+    ctx.fillText(name + '=' + fmt2(fy), toX(x)+8, toY(clamp(fy,yMin,yMax))-4);
+    ctx.restore();
+  });
+
+  // info cards
+  const cardsDiv = document.getElementById('act-cards');
+  let html = '';
+  Object.keys(actFns).forEach(name => {
+    if (!actState[name]) return;
+    const {fn, deriv, formula} = actFns[name];
+    html += `<div class="card2"><span style="color:${actColors[name]};font-weight:700;">${name}</span>: ${tex(formula)}<br>f(${fmt2(x)}) = <strong>${fmt(fn(x))}</strong>`;
+    if (showDeriv) html += ` | f'(${fmt2(x)}) = <strong>${fmt(deriv(x))}</strong>`;
+    html += '</div>';
+  });
+  cardsDiv.innerHTML = html;
+}
+
+// ============================================================
+//  TAB 2: FORWARD PASS
+// ============================================================
+let fpStep = 0;
+let fpData = {};
+
+function fpGetParams() {
+  return {
+    x1: parseFloat(document.getElementById('fp-x1').value),
+    x2: parseFloat(document.getElementById('fp-x2').value),
+    w1: parseFloat(document.getElementById('fp-w1').value),
+    w2: parseFloat(document.getElementById('fp-w2').value),
+    b1: parseFloat(document.getElementById('fp-b1').value),
+    w3: parseFloat(document.getElementById('fp-w3').value),
+    b2: parseFloat(document.getElementById('fp-b2').value),
+  };
+}
+
+function fpCompute(p) {
+  const z1 = p.x1*p.w1 + p.x2*p.w2 + p.b1;
+  const a1 = sigmoid(z1);
+  const z2 = a1*p.w3 + p.b2;
+  const yhat = sigmoid(z2);
+  return {z1, a1, z2, yhat};
+}
+
+function fpChanged() {
+  document.getElementById('fp-x1-val').textContent = fmt2(document.getElementById('fp-x1').value);
+  document.getElementById('fp-x2-val').textContent = fmt2(document.getElementById('fp-x2').value);
+  const p = fpGetParams();
+  fpData = fpCompute(p);
+  fpUpdateMath(p);
+  drawFPCanvas();
+}
+
+function fpUpdateMath(p) {
+  const d = fpData;
+  document.getElementById('fp-s1-math').innerHTML = `z&#8321; = x&#8321;w&#8321; + x&#8322;w&#8322; + b&#8321; = ${fmt2(p.x1)}&times;${fmt2(p.w1)} + ${fmt2(p.x2)}&times;${fmt2(p.w2)} + ${fmt2(p.b1)} = <strong>${fmt(d.z1)}</strong>`;
+  document.getElementById('fp-s2-math').innerHTML = `a&#8321; = &sigma;(${fmt(d.z1)}) = <strong>${fmt(d.a1)}</strong>`;
+  document.getElementById('fp-s3-math').innerHTML = `z&#8322; = a&#8321;w&#8323; + b&#8322; = ${fmt(d.a1)}&times;${fmt2(p.w3)} + ${fmt2(p.b2)} = <strong>${fmt(d.z2)}</strong>`;
+  document.getElementById('fp-s4-math').innerHTML = `&#375; = &sigma;(${fmt(d.z2)}) = <strong>${fmt(d.yhat)}</strong>`;
+}
+
+function fpNext() {
+  if (fpStep < 4) {
+    fpStep++;
+    fpShowSteps();
+    drawFPCanvas();
+  }
+}
+function fpShowAll() { fpStep = 4; fpShowSteps(); drawFPCanvas(); }
+function fpReset() { fpStep = 0; fpShowSteps(); drawFPCanvas(); }
+
+function fpShowSteps() {
+  for (let i=1;i<=4;i++) {
+    const el = document.getElementById('fp-step-'+i);
+    el.classList.toggle('visible', i<=fpStep);
+    el.classList.toggle('active-step', i===fpStep);
+  }
+}
+
+function drawFPCanvas() {
+  const canvas = document.getElementById('fp-canvas');
+  const {ctx,w,h} = setupCanvas(canvas, 900, 300);
+  const p = fpGetParams();
+  const d = fpData;
+
+  const nodes = [
+    {label:'x\u2081', x:w*0.12, y:h*0.32, color:'#4fc3f7', value:p.x1},
+    {label:'x\u2082', x:w*0.12, y:h*0.68, color:'#4fc3f7', value:p.x2},
+    {label:'h\u2081', x:w*0.50, y:h*0.50, color:'#ffa726',
+      value: fpStep>=2 ? d.a1 : null,
+      zValue: fpStep>=1 ? d.z1 : null},
+    {label:'\u0177', x:w*0.85, y:h*0.50, color:'#66bb6a',
+      value: fpStep>=4 ? d.yhat : null,
+      zValue: fpStep>=3 ? d.z2 : null}
+  ];
+  const edges = [
+    {from:0, to:2, weight:p.w1, label:'w\u2081='+fmt2(p.w1)},
+    {from:1, to:2, weight:p.w2, label:'w\u2082='+fmt2(p.w2)},
+    {from:2, to:3, weight:p.w3, label:'w\u2083='+fmt2(p.w3)}
+  ];
+  const activeMap = {1:2, 2:2, 3:3, 4:3};
+  drawNetwork(ctx, w, h, nodes, edges, {
+    radius: 25,
+    activeNode: activeMap[fpStep],
+    biases: [
+      {nodeIdx:2, label:'b\u2081='+fmt2(p.b1)},
+      {nodeIdx:3, label:'b\u2082='+fmt2(p.b2)}
+    ],
+    layerLabels: [
+      {text:'Input', x:w*0.12},
+      {text:'Hidden', x:w*0.50},
+      {text:'Output', x:w*0.85}
+    ]
+  });
+}
+
+// ============================================================
+//  TAB 3: BACKPROPAGATION
+// ============================================================
+let bpStep = 0;
+let bpWeights = {};
+let bpGrads = {};
+let bpForward = {};
+let bpLossHistory = [];
+
+function bpGetInputs() {
+  return {
+    x1: parseFloat(document.getElementById('bp-x1').value),
+    x2: parseFloat(document.getElementById('bp-x2').value),
+    target: parseFloat(document.getElementById('bp-target').value),
+    lr: parseFloat(document.getElementById('bp-lr').value),
+  };
+}
+function bpGetWeights() {
+  return {
+    w1: parseFloat(document.getElementById('bp-w1').value),
+    w2: parseFloat(document.getElementById('bp-w2').value),
+    b1: parseFloat(document.getElementById('bp-b1').value),
+    w3: parseFloat(document.getElementById('bp-w3').value),
+    b2: parseFloat(document.getElementById('bp-b2').value),
+  };
+}
+function bpSetWeights(wt) {
+  document.getElementById('bp-w1').value = fmt(wt.w1);
+  document.getElementById('bp-w2').value = fmt(wt.w2);
+  document.getElementById('bp-b1').value = fmt(wt.b1);
+  document.getElementById('bp-w3').value = fmt(wt.w3);
+  document.getElementById('bp-b2').value = fmt(wt.b2);
+}
+
+function bpComputeForward(inp, wt) {
+  const z1 = inp.x1*wt.w1 + inp.x2*wt.w2 + wt.b1;
+  const a1 = sigmoid(z1);
+  const z2 = a1*wt.w3 + wt.b2;
+  const yhat = sigmoid(z2);
+  const eps = 1e-7;
+  const loss = -(inp.target*Math.log(yhat+eps) + (1-inp.target)*Math.log(1-yhat+eps));
+  return {z1, a1, z2, yhat, loss};
+}
+
+function bpComputeGradients(inp, wt, fwd) {
+  const {z1, a1, z2, yhat} = fwd;
+  const t = inp.target;
+  const eps = 1e-7;
+  // dL/dyhat
+  const dLdy = -(t/(yhat+eps)) + (1-t)/(1-yhat+eps);
+  // dyhat/dz2
+  const dydz2 = yhat*(1-yhat);
+  // dL/dz2
+  const dLdz2 = dLdy * dydz2;
+  // dz2/dw3 = a1
+  const dz2dw3 = a1;
+  // dz2/db2 = 1
+  // dz2/da1 = w3
+  const dz2da1 = wt.w3;
+  // da1/dz1
+  const da1dz1 = a1*(1-a1);
+  // dL/da1
+  const dLda1 = dLdz2 * dz2da1;
+  // dL/dz1
+  const dLdz1 = dLda1 * da1dz1;
+  // dz1/dw1 = x1, dz1/dw2 = x2, dz1/db1 = 1
+  const dLdw3 = dLdz2 * dz2dw3;
+  const dLdb2 = dLdz2;
+  const dLdw1 = dLdz1 * inp.x1;
+  const dLdw2 = dLdz1 * inp.x2;
+  const dLdb1 = dLdz1;
+  return {dLdy, dydz2, dLdz2, dz2dw3, dz2da1, da1dz1, dLda1, dLdz1, dLdw3, dLdb2, dLdw1, dLdw2, dLdb1};
+}
+
+function bpInputChanged() {
+  const inp = bpGetInputs();
+  document.getElementById('bp-x1-val').textContent = fmt2(inp.x1);
+  document.getElementById('bp-x2-val').textContent = fmt2(inp.x2);
+  document.getElementById('bp-target-val').textContent = fmt2(inp.target);
+  document.getElementById('bp-lr-val').textContent = fmt2(inp.lr);
+  bpWeights = bpGetWeights();
+  bpForward = bpComputeForward(inp, bpWeights);
+  bpGrads = bpComputeGradients(inp, bpWeights, bpForward);
+  bpUpdateStepMath();
+  drawBPCanvas();
+}
+
+function bpUpdateStepMath() {
+  const inp = bpGetInputs();
+  const wt = bpWeights;
+  const f = bpForward;
+  const g = bpGrads;
+  const lr = inp.lr;
+
+  document.getElementById('bp-s1-math').innerHTML =
+    `z&#8321; = ${fmt2(inp.x1)}&times;${fmt2(wt.w1)} + ${fmt2(inp.x2)}&times;${fmt2(wt.w2)} + ${fmt2(wt.b1)} = <strong>${fmt(f.z1)}</strong><br>` +
+    `a&#8321; = &sigma;(${fmt(f.z1)}) = <strong>${fmt(f.a1)}</strong><br>` +
+    `z&#8322; = ${fmt(f.a1)}&times;${fmt2(wt.w3)} + ${fmt2(wt.b2)} = <strong>${fmt(f.z2)}</strong><br>` +
+    `&#375; = &sigma;(${fmt(f.z2)}) = <strong>${fmt(f.yhat)}</strong>`;
+
+  document.getElementById('bp-s2-math').innerHTML =
+    `L = -[y&middot;ln(&#375;) + (1-y)&middot;ln(1-&#375;)]<br>` +
+    `L = -[${fmt2(inp.target)}&middot;ln(${fmt(f.yhat)}) + ${fmt2(1-inp.target)}&middot;ln(${fmt(1-f.yhat)})] = <strong>${fmt(f.loss)}</strong>`;
+
+  document.getElementById('bp-s3-math').innerHTML =
+    `<span class="color-dLdy">&part;L/&part;&#375; = ${fmt(g.dLdy)}</span><br>` +
+    `<span class="color-dydz">&part;&#375;/&part;z&#8322; = &#375;(1-&#375;) = ${fmt(g.dydz2)}</span><br>` +
+    `&part;L/&part;w&#8323; = <span class="color-dLdy">&part;L/&part;&#375;</span> &middot; <span class="color-dydz">&part;&#375;/&part;z&#8322;</span> &middot; <span class="color-dzdw">&part;z&#8322;/&part;w&#8323;</span> = ${fmt(g.dLdy)} &times; ${fmt(g.dydz2)} &times; ${fmt(g.dz2dw3)} = <strong>${fmt(g.dLdw3)}</strong><br>` +
+    `&part;L/&part;b&#8322; = ${fmt(g.dLdz2)} &times; 1 = <strong>${fmt(g.dLdb2)}</strong>`;
+
+  document.getElementById('bp-s4-math').innerHTML =
+    `&part;L/&part;a&#8321; = &part;L/&part;z&#8322; &middot; &part;z&#8322;/&part;a&#8321; = ${fmt(g.dLdz2)} &times; ${fmt2(wt.w3)} = <strong>${fmt(g.dLda1)}</strong><br>` +
+    `&part;a&#8321;/&part;z&#8321; = a&#8321;(1-a&#8321;) = <strong>${fmt(g.da1dz1)}</strong><br>` +
+    `&part;L/&part;w&#8321; = ${fmt(g.dLdz1)} &times; ${fmt2(inp.x1)} = <strong>${fmt(g.dLdw1)}</strong><br>` +
+    `&part;L/&part;w&#8322; = ${fmt(g.dLdz1)} &times; ${fmt2(inp.x2)} = <strong>${fmt(g.dLdw2)}</strong><br>` +
+    `&part;L/&part;b&#8321; = ${fmt(g.dLdz1)} = <strong>${fmt(g.dLdb1)}</strong>`;
+
+  const newW1 = wt.w1 - lr*g.dLdw1;
+  const newW2 = wt.w2 - lr*g.dLdw2;
+  const newB1 = wt.b1 - lr*g.dLdb1;
+  const newW3 = wt.w3 - lr*g.dLdw3;
+  const newB2 = wt.b2 - lr*g.dLdb2;
+  document.getElementById('bp-s5-math').innerHTML =
+    `&theta;<sub>new</sub> = &theta;<sub>old</sub> - &alpha;&middot;&part;L/&part;&theta;<br>` +
+    `w&#8321;: ${fmt(wt.w1)} - ${fmt2(lr)}&times;${fmt(g.dLdw1)} = <strong>${fmt(newW1)}</strong><br>` +
+    `w&#8322;: ${fmt(wt.w2)} - ${fmt2(lr)}&times;${fmt(g.dLdw2)} = <strong>${fmt(newW2)}</strong><br>` +
+    `b&#8321;: ${fmt(wt.b1)} - ${fmt2(lr)}&times;${fmt(g.dLdb1)} = <strong>${fmt(newB1)}</strong><br>` +
+    `w&#8323;: ${fmt(wt.w3)} - ${fmt2(lr)}&times;${fmt(g.dLdw3)} = <strong>${fmt(newW3)}</strong><br>` +
+    `b&#8322;: ${fmt(wt.b2)} - ${fmt2(lr)}&times;${fmt(g.dLdb2)} = <strong>${fmt(newB2)}</strong>`;
+
+  // Update stats
+  document.getElementById('bp-loss-val').textContent = fmt(f.loss);
+  document.getElementById('bp-yhat-val').textContent = fmt(f.yhat);
+
+  // Chain rule card
+  bpUpdateChainCard();
+}
+
+function bpUpdateChainCard() {
+  const g = bpGrads;
+  const f = bpForward;
+  const wt = bpWeights;
+  const inp = bpGetInputs();
+
+  // Output chain
+  document.getElementById('bp-chain-output-formula').innerHTML =
+    tex('\\frac{\\partial L}{\\partial w_3} = \\textcolor{#ef5350}{\\frac{\\partial L}{\\partial \\hat{y}}} \\cdot \\textcolor{#ffa726}{\\frac{\\partial \\hat{y}}{\\partial z_2}} \\cdot \\textcolor{#4fc3f7}{\\frac{\\partial z_2}{\\partial w_3}}', true);
+  document.getElementById('bp-chain-output-cards').innerHTML =
+    `<div class="chain-card" style="border:1px solid #ef5350;"><span class="color-dLdy">&part;L/&part;&#375;</span><div class="chain-val color-dLdy">${fmt(g.dLdy)}</div><div class="chain-desc">Loss gradient</div></div>` +
+    `<div class="chain-card" style="border:1px solid #ffa726;"><span class="color-dydz">&part;&#375;/&part;z&#8322;</span><div class="chain-val color-dydz">${fmt(g.dydz2)}</div><div class="chain-desc">Sigmoid deriv</div></div>` +
+    `<div class="chain-card" style="border:1px solid #4fc3f7;"><span class="color-dzdw">&part;z&#8322;/&part;w&#8323;</span><div class="chain-val color-dzdw">${fmt(g.dz2dw3)}</div><div class="chain-desc">= a&#8321;</div></div>`;
+  document.getElementById('bp-chain-output-product').innerHTML =
+    `Product: ${fmt(g.dLdy)} &times; ${fmt(g.dydz2)} &times; ${fmt(g.dz2dw3)} = <strong>${fmt(g.dLdw3)}</strong>`;
+
+  // Hidden chain
+  document.getElementById('bp-chain-hidden-formula').innerHTML =
+    tex('\\frac{\\partial L}{\\partial w_1} = \\textcolor{#ef5350}{\\frac{\\partial L}{\\partial \\hat{y}}} \\cdot \\textcolor{#ffa726}{\\frac{\\partial \\hat{y}}{\\partial z_2}} \\cdot \\textcolor{#ab47bc}{\\frac{\\partial z_2}{\\partial a_1}} \\cdot \\textcolor{#66bb6a}{\\frac{\\partial a_1}{\\partial z_1}} \\cdot \\textcolor{#4fc3f7}{\\frac{\\partial z_1}{\\partial w_1}}', true);
+  document.getElementById('bp-chain-hidden-cards').innerHTML =
+    `<div class="chain-card" style="border:1px solid #ef5350;"><span class="color-dLdy">&part;L/&part;&#375;</span><div class="chain-val" style="color:#ef5350;">${fmt(g.dLdy)}</div><div class="chain-desc">Loss grad</div></div>` +
+    `<div class="chain-card" style="border:1px solid #ffa726;"><span class="color-dydz">&part;&#375;/&part;z&#8322;</span><div class="chain-val" style="color:#ffa726;">${fmt(g.dydz2)}</div><div class="chain-desc">Sig' output</div></div>` +
+    `<div class="chain-card" style="border:1px solid #ab47bc;"><span style="color:#ab47bc;">&part;z&#8322;/&part;a&#8321;</span><div class="chain-val" style="color:#ab47bc;">${fmt2(wt.w3)}</div><div class="chain-desc">= w&#8323;</div></div>` +
+    `<div class="chain-card" style="border:1px solid #66bb6a;"><span style="color:#66bb6a;">&part;a&#8321;/&part;z&#8321;</span><div class="chain-val" style="color:#66bb6a;">${fmt(g.da1dz1)}</div><div class="chain-desc">Sig' hidden</div></div>` +
+    `<div class="chain-card" style="border:1px solid #4fc3f7;"><span class="color-dzdw">&part;z&#8321;/&part;w&#8321;</span><div class="chain-val" style="color:#4fc3f7;">${fmt2(inp.x1)}</div><div class="chain-desc">= x&#8321;</div></div>`;
+  document.getElementById('bp-chain-hidden-product').innerHTML =
+    `Product: ${fmt(g.dLdy)} &times; ${fmt(g.dydz2)} &times; ${fmt2(wt.w3)} &times; ${fmt(g.da1dz1)} &times; ${fmt2(inp.x1)} = <strong>${fmt(g.dLdw1)}</strong>`;
+
+  // Gradient table
+  const params = [
+    {name:'w\u2081', val:wt.w1, grad:g.dLdw1},
+    {name:'w\u2082', val:wt.w2, grad:g.dLdw2},
+    {name:'b\u2081', val:wt.b1, grad:g.dLdb1},
+    {name:'w\u2083', val:wt.w3, grad:g.dLdw3},
+    {name:'b\u2082', val:wt.b2, grad:g.dLdb2},
+  ];
+  let thtml = '';
+  params.forEach(p => {
+    const dir = p.grad > 0 ? 'decrease' : 'increase';
+    const dirColor = p.grad > 0 ? '#ef5350' : '#66bb6a';
+    thtml += `<tr><td>${p.name}</td><td>${fmt(p.val)}</td><td>${fmt(p.grad)}</td><td style="color:${dirColor};font-weight:600;">${dir}</td></tr>`;
+  });
+  document.getElementById('bp-grad-tbody').innerHTML = thtml;
+}
+
+function bpNext() {
+  if (bpStep < 5) {
+    bpStep++;
+    bpShowSteps();
+    drawBPCanvas();
+  } else {
+    // Apply weight update and restart
+    const inp = bpGetInputs();
+    const lr = inp.lr;
+    bpWeights.w1 -= lr * bpGrads.dLdw1;
+    bpWeights.w2 -= lr * bpGrads.dLdw2;
+    bpWeights.b1 -= lr * bpGrads.dLdb1;
+    bpWeights.w3 -= lr * bpGrads.dLdw3;
+    bpWeights.b2 -= lr * bpGrads.dLdb2;
+    bpSetWeights(bpWeights);
+    bpForward = bpComputeForward(inp, bpWeights);
+    bpGrads = bpComputeGradients(inp, bpWeights, bpForward);
+    bpLossHistory.push(bpForward.loss);
+    document.getElementById('bp-epoch').textContent = bpLossHistory.length;
+    bpStep = 1;
+    bpShowSteps();
+    bpUpdateStepMath();
+    drawBPCanvas();
+    drawBPLoss();
+  }
+}
+
+function bpShowAll() {
+  bpStep = 5;
+  bpShowSteps();
+  drawBPCanvas();
+}
+
+function bpTrainOne() {
+  const inp = bpGetInputs();
+  const lr = inp.lr;
+  bpWeights = bpGetWeights();
+  bpForward = bpComputeForward(inp, bpWeights);
+  bpGrads = bpComputeGradients(inp, bpWeights, bpForward);
+  bpWeights.w1 -= lr * bpGrads.dLdw1;
+  bpWeights.w2 -= lr * bpGrads.dLdw2;
+  bpWeights.b1 -= lr * bpGrads.dLdb1;
+  bpWeights.w3 -= lr * bpGrads.dLdw3;
+  bpWeights.b2 -= lr * bpGrads.dLdb2;
+  bpSetWeights(bpWeights);
+  bpForward = bpComputeForward(inp, bpWeights);
+  bpGrads = bpComputeGradients(inp, bpWeights, bpForward);
+  bpLossHistory.push(bpForward.loss);
+  document.getElementById('bp-epoch').textContent = bpLossHistory.length;
+  bpStep = 5;
+  bpShowSteps();
+  bpUpdateStepMath();
+  drawBPCanvas();
+  drawBPLoss();
+}
+
+function bpTrain100() {
+  const inp = bpGetInputs();
+  const lr = inp.lr;
+  let wt = bpGetWeights();
+  for (let i=0;i<100;i++) {
+    const fwd = bpComputeForward(inp, wt);
+    const grd = bpComputeGradients(inp, wt, fwd);
+    wt.w1 -= lr * grd.dLdw1;
+    wt.w2 -= lr * grd.dLdw2;
+    wt.b1 -= lr * grd.dLdb1;
+    wt.w3 -= lr * grd.dLdw3;
+    wt.b2 -= lr * grd.dLdb2;
+    bpLossHistory.push(fwd.loss);
+  }
+  bpWeights = wt;
+  bpSetWeights(wt);
+  bpForward = bpComputeForward(inp, wt);
+  bpGrads = bpComputeGradients(inp, wt, bpForward);
+  document.getElementById('bp-epoch').textContent = bpLossHistory.length;
+  bpStep = 5;
+  bpShowSteps();
+  bpUpdateStepMath();
+  drawBPCanvas();
+  drawBPLoss();
+}
+
+function bpReset() {
+  bpStep = 0;
+  bpLossHistory = [];
+  document.getElementById('bp-w1').value = '0.8';
+  document.getElementById('bp-w2').value = '-0.5';
+  document.getElementById('bp-b1').value = '0.1';
+  document.getElementById('bp-w3').value = '0.6';
+  document.getElementById('bp-b2').value = '-0.2';
+  document.getElementById('bp-epoch').textContent = '0';
+  bpInputChanged();
+  bpShowSteps();
+  drawBPCanvas();
+  drawBPLoss();
+}
+
+function bpShowSteps() {
+  for (let i=1;i<=5;i++) {
+    const el = document.getElementById('bp-step-'+i);
+    el.classList.toggle('visible', i<=bpStep);
+    el.classList.toggle('active-step', i===bpStep);
+  }
+  document.getElementById('bp-chain-card').style.display = bpStep >= 3 ? 'block' : 'none';
+}
+
+function drawBPCanvas() {
+  const canvas = document.getElementById('bp-canvas');
+  const {ctx,w,h} = setupCanvas(canvas, 900, 300);
+  const inp = bpGetInputs();
+  const wt = bpWeights;
+  const f = bpForward;
+
+  const showFwd = bpStep >= 1;
+  const showGrad = bpStep >= 3;
+
+  const nodes = [
+    {label:'x\u2081', x:w*0.12, y:h*0.32, color:'#4fc3f7', value:inp.x1},
+    {label:'x\u2082', x:w*0.12, y:h*0.68, color:'#4fc3f7', value:inp.x2},
+    {label:'h\u2081', x:w*0.50, y:h*0.50, color:'#ffa726',
+      value: showFwd ? f.a1 : null,
+      zValue: showFwd ? f.z1 : null},
+    {label:'\u0177', x:w*0.85, y:h*0.50, color:'#66bb6a',
+      value: showFwd ? f.yhat : null,
+      zValue: showFwd ? f.z2 : null}
+  ];
+  const edges = [
+    {from:0, to:2, weight:wt.w1, label:'w\u2081='+fmt2(wt.w1)},
+    {from:1, to:2, weight:wt.w2, label:'w\u2082='+fmt2(wt.w2)},
+    {from:2, to:3, weight:wt.w3, label:'w\u2083='+fmt2(wt.w3)}
+  ];
+
+  let gradArrows = null;
+  if (showGrad) {
+    const g = bpGrads;
+    gradArrows = [
+      {from:3, to:2, color:'#ef5350', label:'\u2202L/\u2202a\u2081='+fmt2(g.dLda1)},
+    ];
+    if (bpStep >= 4) {
+      gradArrows.push(
+        {from:2, to:0, color:'#ffa726', label:'\u2202L/\u2202w\u2081='+fmt2(g.dLdw1)},
+        {from:2, to:1, color:'#ffa726', label:'\u2202L/\u2202w\u2082='+fmt2(g.dLdw2)},
+      );
+    }
+  }
+
+  const activeMap = {1:2, 2:3, 3:3, 4:2, 5:null};
+  drawNetwork(ctx, w, h, nodes, edges, {
+    radius: 25,
+    activeNode: activeMap[bpStep],
+    gradientArrows: gradArrows,
+    biases: [
+      {nodeIdx:2, label:'b\u2081='+fmt2(wt.b1)},
+      {nodeIdx:3, label:'b\u2082='+fmt2(wt.b2)}
+    ],
+    layerLabels: [
+      {text:'Input', x:w*0.12},
+      {text:'Hidden', x:w*0.50},
+      {text:'Output', x:w*0.85}
+    ]
+  });
+
+  // Target label
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.font = '12px "Segoe UI",sans-serif';
+  ctx.fillStyle = '#a0a0b8';
+  ctx.fillText('target=' + fmt2(inp.target), w*0.85 + 32, h*0.50);
+  ctx.restore();
+}
+
+function drawBPLoss() {
+  const canvas = document.getElementById('bp-loss-canvas');
+  const {ctx,w,h} = setupCanvas(canvas, 450, 260);
+
+  const padL = 50, padR = 20, padT = 25, padB = 30;
+  const pw = w - padL - padR, ph = h - padT - padB;
+
+  // Title
+  ctx.fillStyle = '#a0a0b8';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Loss over Epochs', w/2, 16);
+
+  if (bpLossHistory.length < 2) {
+    ctx.fillStyle = '#666';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('Train to see loss curve', w/2, h/2);
+    return;
+  }
+
+  const data = bpLossHistory;
+  const maxLoss = Math.max(...data) * 1.1 || 1;
+  const toX = i => padL + (i/(data.length-1))*pw;
+  const toY = v => padT + (1 - v/maxLoss)*ph;
+
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, h-padB); ctx.lineTo(w-padR, h-padB); ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#666';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(fmt2(maxLoss), padL-4, padT+4);
+  ctx.fillText('0', padL-4, h-padB);
+  ctx.textAlign = 'center';
+  ctx.fillText('Epoch', w/2, h-6);
+  ctx.fillText(data.length.toString(), w-padR, h-padB+14);
+
+  // Curve
+  ctx.beginPath();
+  ctx.strokeStyle = '#ef5350';
+  ctx.lineWidth = 2;
+  data.forEach((v,i) => {
+    i===0 ? ctx.moveTo(toX(i), toY(v)) : ctx.lineTo(toX(i), toY(v));
+  });
+  ctx.stroke();
+}
+
+// ============================================================
+//  TAB 4: TRAINING LIVE (XOR 2-4-1)
+// ============================================================
+let trPlaying = false;
+let trAnimId = null;
+let trEpoch = 0;
+let trNet = null;
+let trLossHist = [];
+let trData = [];
+
+function trCreateData() {
+  const data = [];
+  const rng = () => (Math.random()-0.5)*0.4;
+  // 10 points per quadrant
+  for (let i=0;i<10;i++) { data.push({x:[0.25+rng(), 0.25+rng()], y:0}); } // (0,0)->0
+  for (let i=0;i<10;i++) { data.push({x:[0.75+rng(), 0.25+rng()], y:1}); } // (1,0)->1
+  for (let i=0;i<10;i++) { data.push({x:[0.25+rng(), 0.75+rng()], y:1}); } // (0,1)->1
+  for (let i=0;i<10;i++) { data.push({x:[0.75+rng(), 0.75+rng()], y:0}); } // (1,1)->0
+  return data;
+}
+
+function trCreateNet() {
+  // 2-4-1 network
+  const rand = () => (Math.random()-0.5)*2;
+  return {
+    w1: [rand(),rand(),rand(),rand(), rand(),rand(),rand(),rand()], // 2x4 flattened [row-major]
+    b1: [rand(),rand(),rand(),rand()],
+    w2: [rand(),rand(),rand(),rand()], // 4x1
+    b2: [rand()],
+  };
+}
+
+function trForward(net, x) {
+  // hidden layer
+  const h = [];
+  for (let j=0;j<4;j++) {
+    let z = net.b1[j];
+    for (let i=0;i<2;i++) z += x[i] * net.w1[i*4+j];
+    h.push(sigmoid(z));
+  }
+  // output
+  let z2 = net.b2[0];
+  for (let j=0;j<4;j++) z2 += h[j] * net.w2[j];
+  return {h, out: sigmoid(z2), z2};
+}
+
+function trTrainEpoch(net, data, lr) {
+  let totalLoss = 0;
+  // SGD: full batch
+  // Accumulate gradients
+  const gw1 = new Float64Array(8);
+  const gb1 = new Float64Array(4);
+  const gw2 = new Float64Array(4);
+  const gb2 = new Float64Array(1);
+  const n = data.length;
+
+  for (const d of data) {
+    const {h, out, z2} = trForward(net, d.x);
+    const eps = 1e-7;
+    totalLoss += -(d.y*Math.log(out+eps) + (1-d.y)*Math.log(1-out+eps));
+
+    // output gradients
+    const dLdz2 = out - d.y; // simplified BCE + sigmoid
+    for (let j=0;j<4;j++) gw2[j] += dLdz2 * h[j];
+    gb2[0] += dLdz2;
+
+    // hidden gradients
+    for (let j=0;j<4;j++) {
+      const dLdh = dLdz2 * net.w2[j];
+      const dhdz = h[j]*(1-h[j]);
+      const dLdz1 = dLdh * dhdz;
+      gb1[j] += dLdz1;
+      for (let i=0;i<2;i++) gw1[i*4+j] += dLdz1 * d.x[i];
+    }
+  }
+
+  // Update
+  for (let i=0;i<8;i++) net.w1[i] -= lr * gw1[i] / n;
+  for (let j=0;j<4;j++) net.b1[j] -= lr * gb1[j] / n;
+  for (let j=0;j<4;j++) net.w2[j] -= lr * gw2[j] / n;
+  net.b2[0] -= lr * gb2[0] / n;
+
+  return totalLoss / n;
+}
+
+function trTogglePlay() {
+  trPlaying = !trPlaying;
+  document.getElementById('tr-play-btn').textContent = trPlaying ? 'Pause' : 'Play';
+  if (trPlaying) trLoop();
+  else if (trAnimId) { cancelAnimationFrame(trAnimId); trAnimId = null; }
+}
+
+function trReset() {
+  trPlaying = false;
+  if (trAnimId) { cancelAnimationFrame(trAnimId); trAnimId = null; }
+  document.getElementById('tr-play-btn').textContent = 'Play';
+  trEpoch = 0;
+  trNet = trCreateNet();
+  trData = trCreateData();
+  trLossHist = [];
+  document.getElementById('tr-epoch').textContent = '0';
+  document.getElementById('tr-loss-val').textContent = '-';
+  document.getElementById('tr-acc-val').textContent = '-';
+  drawTrBoundary();
+  drawTrLoss();
+}
+
+function trLoop() {
+  if (!trPlaying) return;
+  const speed = parseInt(document.getElementById('tr-speed').value);
+  const lr = parseFloat(document.getElementById('tr-lr').value);
+  let loss = 0;
+  for (let i=0;i<speed;i++) {
+    loss = trTrainEpoch(trNet, trData, lr);
+    trEpoch++;
+    if (trEpoch % Math.max(1,Math.floor(speed/5)) === 0) trLossHist.push(loss);
+  }
+  // accuracy
+  let correct = 0;
+  trData.forEach(d => {
+    const pred = trForward(trNet, d.x).out;
+    if ((pred >= 0.5) === (d.y >= 0.5)) correct++;
+  });
+  const acc = correct / trData.length * 100;
+  document.getElementById('tr-epoch').textContent = trEpoch;
+  document.getElementById('tr-loss-val').textContent = fmt(loss);
+  document.getElementById('tr-acc-val').textContent = acc.toFixed(0) + '%';
+  drawTrBoundary();
+  drawTrLoss();
+  trAnimId = requestAnimationFrame(trLoop);
+}
+
+function drawTrBoundary() {
+  const canvas = document.getElementById('tr-boundary-canvas');
+  const {ctx,w,h} = setupCanvas(canvas, 450, 400);
+  if (!trNet) return;
+
+  const res = 40;
+  const cellW = w/res, cellH = h/res;
+  for (let i=0;i<res;i++) {
+    for (let j=0;j<res;j++) {
+      const x = (i+0.5)/res;
+      const y = (j+0.5)/res;
+      const pred = trForward(trNet, [x, y]).out;
+      const r = Math.round(239*pred + 79*(1-pred));
+      const g = Math.round(83*pred + 195*(1-pred));
+      const b = Math.round(80*pred + 247*(1-pred));
+      ctx.fillStyle = `rgba(${r},${g},${b},0.3)`;
+      ctx.fillRect(i*cellW, j*cellH, cellW+1, cellH+1);
+    }
+  }
+
+  // Draw data points
+  trData.forEach(d => {
+    ctx.beginPath();
+    ctx.arc(d.x[0]*w, d.x[1]*h, 5, 0, Math.PI*2);
+    ctx.fillStyle = d.y === 1 ? '#ef5350' : '#4fc3f7';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+
+  // Axes labels
+  ctx.fillStyle = '#666';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('x\u2081', w/2, h-4);
+  ctx.save();
+  ctx.translate(10, h/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('x\u2082', 0, 0);
+  ctx.restore();
+
+  // Decision boundary label
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Decision Boundary', 8, 16);
+}
+
+function drawTrLoss() {
+  const canvas = document.getElementById('tr-loss-canvas');
+  const {ctx,w,h} = setupCanvas(canvas, 450, 260);
+  const padL = 50, padR = 20, padT = 25, padB = 30;
+  const pw = w-padL-padR, ph = h-padT-padB;
+
+  ctx.fillStyle = '#a0a0b8';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Training Loss', w/2, 16);
+
+  if (trLossHist.length < 2) {
+    ctx.fillStyle = '#666';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('Press Play to start', w/2, h/2);
+    return;
+  }
+
+  const data = trLossHist;
+  const maxL = Math.max(...data)*1.1 || 1;
+  const toX = i => padL + (i/(data.length-1))*pw;
+  const toY = v => padT + (1-v/maxL)*ph;
+
+  ctx.strokeStyle = 'rgba(255,255,255,.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padL,padT); ctx.lineTo(padL,h-padB); ctx.lineTo(w-padR,h-padB); ctx.stroke();
+
+  ctx.fillStyle = '#666';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(fmt2(maxL), padL-4, padT+4);
+  ctx.fillText('0', padL-4, h-padB);
+
+  ctx.beginPath();
+  ctx.strokeStyle = '#ffa726';
+  ctx.lineWidth = 2;
+  data.forEach((v,i) => {
+    i===0 ? ctx.moveTo(toX(i),toY(v)) : ctx.lineTo(toX(i),toY(v));
+  });
+  ctx.stroke();
+}
+
+// ============================================================
+//  TAB 5: QUIZ
+// ============================================================
+const quizQuestions = [
+  {q: "What is the primary purpose of an activation function in a neural network?",
+   opts: ["Speed up training", "Introduce non-linearity", "Reduce the number of parameters", "Normalize inputs"],
+   ans: 1, expl: "Activation functions introduce non-linearity, allowing neural networks to learn complex, non-linear patterns."},
+  {q: "Which activation function suffers most from the vanishing gradient problem?",
+   opts: ["ReLU", "Sigmoid", "Leaky ReLU", "Step function"],
+   ans: 1, expl: "Sigmoid squashes values to (0,1), and its derivative approaches 0 for large |x|, causing gradients to vanish in deep networks."},
+  {q: "In backpropagation, gradients flow in which direction?",
+   opts: ["Input to output (forward)", "Output to input (backward)", "Randomly", "Both directions simultaneously"],
+   ans: 1, expl: "Backpropagation computes gradients from the loss backward through the network to update weights."},
+  {q: "What does the chain rule allow us to compute?",
+   opts: ["The loss function directly", "Derivatives of composite functions", "The optimal learning rate", "The number of epochs needed"],
+   ans: 1, expl: "The chain rule lets us compute derivatives of composite functions by multiplying derivatives along the chain."},
+  {q: "If the gradient of the loss with respect to a weight is positive, what should happen to that weight?",
+   opts: ["Increase it", "Decrease it", "Keep it the same", "Set it to zero"],
+   ans: 1, expl: "A positive gradient means increasing the weight increases the loss, so we decrease it (gradient descent)."},
+  {q: "What is Binary Cross-Entropy loss used for?",
+   opts: ["Multi-class classification", "Binary classification", "Regression", "Dimensionality reduction"],
+   ans: 1, expl: "BCE loss is specifically designed for binary classification problems with outputs between 0 and 1."},
+  {q: "In a 2-1-1 network with sigmoid activations, how many learnable parameters are there?",
+   opts: ["3", "4", "5", "6"],
+   ans: 2, expl: "2 input weights + 1 hidden bias + 1 output weight + 1 output bias = 5 parameters."},
+  {q: "What happens if the learning rate is too large?",
+   opts: ["Training is too slow", "The loss may diverge/oscillate", "The network always converges", "Gradients vanish"],
+   ans: 1, expl: "A large learning rate can cause the optimizer to overshoot minima, leading to oscillation or divergence."}
+];
+
+let quizAnswered = 0;
+let quizCorrect = 0;
+
+function initQuiz() {
+  const container = document.getElementById('quiz-container');
+  let html = '';
+  quizQuestions.forEach((q, qi) => {
+    html += `<div class="card" id="quiz-q-${qi}">`;
+    html += `<div class="quiz-q">${qi+1}. ${q.q}</div>`;
+    q.opts.forEach((opt, oi) => {
+      html += `<div class="quiz-option" id="qo-${qi}-${oi}" onclick="quizAnswer(${qi},${oi})">${opt}</div>`;
+    });
+    html += `<div class="quiz-feedback" id="qf-${qi}"></div>`;
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function quizAnswer(qi, oi) {
+  const q = quizQuestions[qi];
+  // Check if already answered
+  const fb = document.getElementById('qf-'+qi);
+  if (fb.classList.contains('show')) return;
+
+  quizAnswered++;
+  const correct = oi === q.ans;
+  if (correct) quizCorrect++;
+
+  // Mark options
+  q.opts.forEach((_, i) => {
+    const el = document.getElementById('qo-'+qi+'-'+i);
+    el.classList.add('locked');
+    if (i === q.ans) el.classList.add('right');
+    else if (i === oi && !correct) el.classList.add('wrong');
+  });
+
+  fb.innerHTML = (correct ? '<strong style="color:var(--accent-green);">Correct!</strong> ' : '<strong style="color:var(--accent-red);">Incorrect.</strong> ') + q.expl;
+  fb.classList.add('show');
+  fb.style.background = correct ? 'rgba(102,187,106,.1)' : 'rgba(239,83,80,.1)';
+
+  if (quizAnswered === quizQuestions.length) {
+    const sc = document.getElementById('quiz-score-card');
+    sc.style.display = 'block';
+    document.getElementById('quiz-score-text').textContent = quizCorrect + ' / ' + quizQuestions.length;
+    document.getElementById('quiz-score-text').style.color =
+      quizCorrect >= 6 ? 'var(--accent-green)' : quizCorrect >= 4 ? 'var(--accent-orange)' : 'var(--accent-red)';
+  }
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+initQuiz();
+// Init forward pass
+fpChanged();
+// Init backprop
+bpWeights = bpGetWeights();
+bpInputChanged();
+// Init training
+trNet = trCreateNet();
+trData = trCreateData();
+// Draw initial tab
+drawActivations();
+
+// Resize handler
+window.addEventListener('resize', () => {
+  const activeTab = tabNames.find(t => document.getElementById('tab-'+t).classList.contains('active'));
+  if (activeTab === 'activations') drawActivations();
+  else if (activeTab === 'forward') drawFPCanvas();
+  else if (activeTab === 'backprop') { drawBPCanvas(); drawBPLoss(); }
+  else if (activeTab === 'training') { drawTrBoundary(); drawTrLoss(); }
+});
+</script>
+</body>
+</html>

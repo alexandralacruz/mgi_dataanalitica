@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Pro: Métricas de Regresión</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 20px; background: #f0f2f5; color: #1a1a1b; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .grid-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .card { padding: 20px; background: #fff; border-radius: 10px; text-align: center; border: 1px solid #e1e4e8; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .controls { background: #1e293b; color: white; padding: 20px; border-radius: 10px; margin-bottom: 25px; }
+        input[type=range] { width: 100%; margin-top: 10px; }
+        .interpretation { margin-top: 30px; padding: 20px; background: #f8fafc; border-left: 5px solid #3498db; border-radius: 5px; }
+        h2 { margin-top: 0; color: #1e293b; border-bottom: 2px solid #3498db; display: inline-block; padding-bottom: 5px; }
+        .val-highlight { color: #3498db; font-weight: bold; font-size: 1.2em; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Simulador de Métricas para Data Science</h2>
+    
+    <div class="controls">
+        <label>Predicción para el último punto (Real es 80): <span class="val-highlight" id="valDisplay">50</span></label>
+        <input type="range" id="slider" min="0" max="160" value="50">
+    </div>
+
+    <div class="grid-charts">
+        <div class="card">
+            <canvas id="regChart"></canvas>
+        </div>
+        <div class="card">
+            <canvas id="lossChart"></canvas>
+        </div>
+    </div>
+
+    <div class="metrics-row">
+        <div class="card" style="border-top: 5px solid #3498db;">
+            <small>MAE (Lineal)</small>
+            <div id="mae" style="font-size: 1.6em; font-weight: bold; color: #3498db;">-</div>
+        </div>
+        <div class="card" style="border-top: 5px solid #e74c3c;">
+            <small>MSE (Cuadrático)</small>
+            <div id="mse" style="font-size: 1.6em; font-weight: bold; color: #e74c3c;">-</div>
+        </div>
+        <div class="card" style="border-top: 5px solid #f1c40f;">
+            <small>RMSE (Raíz)</small>
+            <div id="rmse" style="font-size: 1.6em; font-weight: bold; color: #f1c40f;">-</div>
+        </div>
+        <div class="card" style="border-top: 5px solid #2ecc71;">
+            <small>R² (Ajuste)</small>
+            <div id="r2" style="font-size: 1.6em; font-weight: bold; color: #2ecc71;">-</div>
+        </div>
+    </div>
+
+    <div class="interpretation">
+        <h3>💡 Guía de Observación para la clase:</h3>
+        <ul>
+            <li><strong>Sensibilidad:</strong> Nota cómo el <strong>MSE</strong> aumenta de forma explosiva comparado con el MAE cuando te alejas del valor real (80).</li>
+            <li><strong>Interpretación:</strong> El RMSE tiene una magnitud similar al MAE, pero siempre será un poco mayor si hay errores grandes.</li>
+            <li><strong>R² Score:</strong> Si la línea azul se aleja mucho de los puntos, el R² caerá por debajo de 0. Eso significa que el modelo es inútil.</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    const ctxReg = document.getElementById('regChart').getContext('2d');
+    const ctxLoss = document.getElementById('lossChart').getContext('2d');
+    
+    const y_true = [10, 25, 35, 50, 80];
+    let y_pred = [10, 25, 35, 50, 50]; 
+
+    // GRÁFICO 1: Regresión (Corregido con Scatter + Line)
+    const regChart = new Chart(ctxReg, {
+        data: {
+            labels: ['P1', 'P2', 'P3', 'P4', 'P5'],
+            datasets: [
+                {
+                    type: 'scatter',
+                    label: 'Valores Reales',
+                    data: y_true.map((v, i) => ({x: i, y: v})),
+                    backgroundColor: '#1e293b',
+                    pointRadius: 8
+                },
+                {
+                    type: 'line',
+                    label: 'Predicción del Modelo',
+                    data: y_pred,
+                    borderColor: '#3498db',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: { type: 'linear', position: 'bottom', min: -0.5, max: 4.5, ticks: { stepSize: 1 } },
+                y: { min: 0, max: 170 }
+            },
+            plugins: { title: { display: true, text: 'Visualización de Predicción vs Real' } }
+        }
+    });
+
+    // GRÁFICO 2: Histórico de Pérdida
+    const lossChart = new Chart(ctxLoss, {
+        type: 'line',
+        data: {
+            labels: [], 
+            datasets: [
+                { label: 'MAE', data: [], borderColor: '#3498db', tension: 0.3, pointRadius: 0 },
+                { label: 'MSE', data: [], borderColor: '#e74c3c', tension: 0.3, pointRadius: 0 }
+            ]
+        },
+        options: { 
+            responsive: true,
+            scales: { y: { type: 'logarithmic', title: { display: true, text: 'Valor de Error (Log)' } } },
+            plugins: { title: { display: true, text: 'Curva de Penalización (MAE vs MSE)' } }
+        }
+    });
+
+    function update() {
+        const val = parseFloat(document.getElementById('slider').value);
+        document.getElementById('valDisplay').innerText = val;
+        
+        // Actualizar datos del gráfico
+        y_pred[4] = val;
+        regChart.data.datasets[1].data = [...y_pred];
+        regChart.update();
+
+        // Cálculo de métricas
+        let sumAbs = 0, sumSq = 0, sumTot = 0;
+        const meanTrue = y_true.reduce((a, b) => a + b) / y_true.length;
+
+        y_true.forEach((real, i) => {
+            let err = Math.abs(real - y_pred[i]);
+            sumAbs += err;
+            sumSq += Math.pow(err, 2);
+            sumTot += Math.pow(real - meanTrue, 2);
+        });
+
+        const mae = sumAbs / 5;
+        const mse = sumSq / 5;
+        const r2 = 1 - (sumSq / sumTot);
+
+        document.getElementById('mae').innerText = mae.toFixed(2);
+        document.getElementById('mse').innerText = mse.toFixed(0);
+        document.getElementById('rmse').innerText = Math.sqrt(mse).toFixed(2);
+        document.getElementById('r2').innerText = r2.toFixed(3);
+
+        // Actualizar histórico
+        if(lossChart.data.labels.length > 40) {
+            lossChart.data.labels.shift();
+            lossChart.data.datasets[0].data.shift();
+            lossChart.data.datasets[1].data.shift();
+        }
+        lossChart.data.labels.push("");
+        lossChart.data.datasets[0].data.push(mae);
+        lossChart.data.datasets[1].data.push(mse);
+        lossChart.update('none');
+    }
+
+    document.getElementById('slider').addEventListener('input', update);
+    update();
+</script>
+</body>
+</html>

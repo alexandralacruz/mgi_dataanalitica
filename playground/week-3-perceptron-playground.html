@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 3 - Perceptron Playground: AND &amp; XOR</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#1a1a2e;--bg2:#16213e;--bg3:#0f3460;--card:#1e2746;--card2:#243054;
+  --text:#e0e0e0;--text2:#a0a0b8;--accent-blue:#4fc3f7;--accent-green:#66bb6a;
+  --accent-orange:#ffa726;--accent-purple:#ab47bc;--accent-red:#ef5350;--accent-teal:#26a69a;
+  --accent-yellow:#ffee58;--accent-pink:#ec407a;
+  --radius:10px;--shadow:0 4px 20px rgba(0,0,0,.3);
+}
+html{scroll-behavior:smooth;font-size:16px;}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6;}
+/* LAYOUT */
+.container{max-width:1100px;margin:0 auto;padding:30px 36px 80px;}
+h1{font-size:2rem;margin-bottom:8px;color:#fff;}
+h3{font-size:1.4rem;margin-bottom:16px;color:#fff;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+h3 .badge{font-size:.7rem;padding:3px 10px;border-radius:20px;color:#fff;font-weight:600;}
+h4{font-size:1.05rem;margin:18px 0 10px;color:var(--text);}
+p,.desc{color:var(--text2);margin-bottom:14px;font-size:.95rem;}
+.card{background:var(--card);border-radius:var(--radius);padding:24px;margin-bottom:20px;box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.04);overflow:hidden;}
+.card2{background:var(--card2);border-radius:var(--radius);padding:14px;margin-bottom:10px;}
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:24px;flex-wrap:wrap;}
+.tab{padding:12px 28px;border-radius:8px 8px 0 0;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .2s;border:1px solid rgba(255,255,255,.08);border-bottom:none;color:var(--text2);background:var(--card2);}
+.tab:hover{color:#fff;background:rgba(255,255,255,.06);}
+.tab.active{color:var(--accent-blue);background:var(--card);border-color:var(--accent-blue);border-bottom:2px solid var(--card);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+/* GRID */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr;}}
+/* SLIDERS */
+.slider-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.slider-row .slider-label{min-width:42px;font-size:.85rem;color:var(--text2);font-weight:600;}
+.slider-row .slider-value{min-width:48px;text-align:right;font-size:.85rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text);}
+.slider-row input[type=range]{flex:1;min-width:80px;accent-color:var(--accent-blue);}
+/* BUTTONS */
+button{background:var(--accent-blue);color:#000;border:none;border-radius:6px;padding:8px 18px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;}
+button:hover{filter:brightness(1.15);transform:translateY(-1px);}
+button.green{background:var(--accent-green);}
+button.orange{background:var(--accent-orange);}
+button.purple{background:var(--accent-purple);color:#fff;}
+button.red{background:var(--accent-red);color:#fff;}
+button.teal{background:var(--accent-teal);color:#fff;}
+button.sm{padding:5px 12px;font-size:.8rem;}
+button.outline{background:transparent;border:1px solid var(--accent-blue);color:var(--accent-blue);}
+button.outline:hover{background:var(--accent-blue);color:#000;}
+/* CANVAS */
+canvas{border-radius:var(--radius);display:block;background:#111827;width:100%;height:auto;}
+/* TABLE */
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.9rem;}
+th,td{padding:8px 12px;border:1px solid rgba(255,255,255,.08);text-align:center;}
+th{background:rgba(255,255,255,.05);color:var(--accent-blue);font-weight:600;}
+.correct{color:var(--accent-green)!important;font-weight:600;}
+.incorrect{color:var(--accent-red)!important;font-weight:600;}
+/* MATH */
+.math-block{display:block;background:rgba(0,0,0,.3);border-radius:8px;padding:10px 14px;margin:8px 0;overflow-x:auto;font-size:1rem;}
+/* INFO BOX */
+.info-box{background:rgba(79,195,247,.08);border-left:3px solid var(--accent-blue);padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0;font-size:.9rem;color:var(--text2);}
+.info-box.success{border-left-color:var(--accent-green);background:rgba(102,187,106,.08);}
+.info-box.warning{border-left-color:var(--accent-orange);background:rgba(255,167,38,.08);}
+.info-box.error{border-left-color:var(--accent-red);background:rgba(239,83,80,.08);}
+/* NETWORK VIS */
+.network-diagram{display:flex;align-items:center;justify-content:center;gap:40px;padding:20px 0;}
+.layer{display:flex;flex-direction:column;align-items:center;gap:16px;}
+.neuron{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;border:2px solid;}
+.neuron.input{border-color:var(--accent-blue);color:var(--accent-blue);}
+.neuron.hidden{border-color:var(--accent-orange);color:var(--accent-orange);}
+.neuron.output{border-color:var(--accent-green);color:var(--accent-green);}
+.layer-label{font-size:.75rem;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:1px;}
+/* STATUS BADGE */
+.status{display:inline-block;padding:4px 12px;border-radius:20px;font-size:.8rem;font-weight:600;}
+.status.pass{background:rgba(102,187,106,.15);color:var(--accent-green);}
+.status.fail{background:rgba(239,83,80,.15);color:var(--accent-red);}
+/* SCROLLBAR */
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px;}
+/* SUBTITLE */
+.subtitle{color:var(--text2);font-size:1rem;margin-bottom:24px;}
+/* ACTIVATION SELECT */
+.act-select{display:flex;gap:8px;margin:8px 0 16px;}
+.act-btn{padding:5px 14px;border-radius:20px;font-size:.8rem;background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--text2);cursor:pointer;transition:all .2s;}
+.act-btn:hover{border-color:var(--accent-blue);color:var(--accent-blue);}
+.act-btn.active{background:rgba(79,195,247,.15);border-color:var(--accent-blue);color:var(--accent-blue);}
+/* LEGEND */
+.legend{display:flex;gap:20px;margin:12px 0;font-size:.85rem;color:var(--text2);flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:6px;}
+.legend-dot{width:14px;height:14px;border-radius:50%;border:2px solid #fff;}
+.legend-line{width:24px;height:3px;border-radius:2px;}
+/* INTRO STYLES */
+.concept-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:16px 0;}
+@media(max-width:900px){.concept-grid{grid-template-columns:1fr;}}
+.concept-card{background:var(--card2);border-radius:var(--radius);padding:20px;border:1px solid rgba(255,255,255,.06);}
+.concept-card h4{margin-top:0;}
+.concept-card canvas{margin:12px 0;}
+.truth-table-mini{width:auto;margin:8px auto;font-size:.85rem;}
+.truth-table-mini th,.truth-table-mini td{padding:4px 14px;}
+.highlight-text{color:var(--accent-blue);font-weight:600;}
+.sep-label{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.78rem;font-weight:600;margin-bottom:8px;}
+.sep-yes{background:rgba(102,187,106,.15);color:var(--accent-green);}
+.sep-no{background:rgba(239,83,80,.15);color:var(--accent-red);}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Perceptron Playground</h1>
+<p class="subtitle">Explore why a single perceptron can solve AND but fails on XOR — and how a neural network fixes it.</p>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('intro')">Background</div>
+  <div class="tab" onclick="switchTab('and')">AND Gate</div>
+  <div class="tab" onclick="switchTab('xor')">XOR Problem</div>
+  <div class="tab" onclick="switchTab('nn')">Neural Network (XOR)</div>
+</div>
+
+<!-- ======== TAB 0: INTRO ======== -->
+<div id="tab-intro" class="tab-content active">
+  <h3>The AND &amp; XOR Problem <span class="badge" style="background:var(--accent-teal)">Background</span></h3>
+  <p>Before we start experimenting, let's understand the two problems and what it means for data to be <strong>linearly separable</strong>.</p>
+
+  <div class="concept-grid">
+    <!-- AND CARD -->
+    <div class="concept-card">
+      <span class="sep-label sep-yes">Linearly Separable</span>
+      <h4>AND Gate</h4>
+      <p style="font-size:.9rem;color:var(--text2)">The AND gate outputs <strong>1 only when both inputs are 1</strong>. All other combinations produce 0.</p>
+      <table class="truth-table-mini">
+        <thead><tr><th>x₁</th><th>x₂</th><th>AND</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>0</td><td style="color:var(--accent-red);font-weight:600">0</td></tr>
+          <tr><td>0</td><td>1</td><td style="color:var(--accent-red);font-weight:600">0</td></tr>
+          <tr><td>1</td><td>0</td><td style="color:var(--accent-red);font-weight:600">0</td></tr>
+          <tr><td>1</td><td>1</td><td style="color:var(--accent-green);font-weight:600">1</td></tr>
+        </tbody>
+      </table>
+      <canvas id="intro-and-canvas" width="300" height="300"></canvas>
+      <p style="font-size:.85rem;color:var(--text2);margin-top:8px">A single straight line can separate the green point (class 1) from the red points (class 0). This is what <span class="highlight-text">linearly separable</span> means.</p>
+    </div>
+
+    <!-- XOR CARD -->
+    <div class="concept-card">
+      <span class="sep-label sep-no">NOT Linearly Separable</span>
+      <h4>XOR Gate (Exclusive OR)</h4>
+      <p style="font-size:.9rem;color:var(--text2)">XOR outputs <strong>1 when the inputs are different</strong>, and 0 when they are the same.</p>
+      <table class="truth-table-mini">
+        <thead><tr><th>x₁</th><th>x₂</th><th>XOR</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>0</td><td style="color:var(--accent-red);font-weight:600">0</td></tr>
+          <tr><td>0</td><td>1</td><td style="color:var(--accent-green);font-weight:600">1</td></tr>
+          <tr><td>1</td><td>0</td><td style="color:var(--accent-green);font-weight:600">1</td></tr>
+          <tr><td>1</td><td>1</td><td style="color:var(--accent-red);font-weight:600">0</td></tr>
+        </tbody>
+      </table>
+      <canvas id="intro-xor-canvas" width="300" height="300"></canvas>
+      <p style="font-size:.85rem;color:var(--text2);margin-top:8px">The green points sit at <strong>opposite corners</strong>. No single straight line can put both green points on one side and both red points on the other. This is <span class="highlight-text">NOT linearly separable</span>.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h4>What does "Linearly Separable" mean?</h4>
+    <p style="color:var(--text2)">A dataset is <strong>linearly separable</strong> if there exists a straight line (in 2D), a plane (in 3D), or a hyperplane (in higher dimensions) that perfectly divides the data points into their respective classes.</p>
+    <div class="grid2" style="margin-top:12px;">
+      <div class="info-box success">
+        <strong>A perceptron can solve it:</strong> If the data IS linearly separable, a single perceptron (one neuron with a step/sigmoid activation) is guaranteed to find a solution. Examples: AND, OR, NAND gates.
+      </div>
+      <div class="info-box error">
+        <strong>A perceptron cannot solve it:</strong> If the data is NOT linearly separable, no single perceptron will ever classify all points correctly. Example: XOR. This was the key finding of Minsky &amp; Papert (1969) that led to the "AI winter."
+      </div>
+    </div>
+    <div class="info-box" style="margin-top:12px;">
+      <strong>The solution?</strong> Neural networks with hidden layers. By combining multiple neurons in layers, we can create non-linear decision boundaries that solve problems like XOR. Use the tabs above to explore this hands-on.
+    </div>
+  </div>
+</div>
+
+<!-- ======== TAB 1: AND ======== -->
+<div id="tab-and" class="tab-content">
+  <h3>Single Perceptron — AND Gate <span class="badge" style="background:var(--accent-green)">Linearly Separable</span></h3>
+  <p>The AND function outputs 1 only when <strong>both</strong> inputs are 1. A single perceptron can learn this because the two classes are linearly separable. Adjust the weights and bias to find a decision boundary that correctly classifies all four points.</p>
+
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <h4>Parameters</h4>
+        <div class="slider-row">
+          <span class="slider-label">w₁</span>
+          <input type="range" id="and-w1" min="-5" max="5" step="0.1" value="1">
+          <span class="slider-value" id="and-w1-val">1.0</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">w₂</span>
+          <input type="range" id="and-w2" min="-5" max="5" step="0.1" value="1">
+          <span class="slider-value" id="and-w2-val">1.0</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">b</span>
+          <input type="range" id="and-b" min="-5" max="5" step="0.1" value="-1.5">
+          <span class="slider-value" id="and-b-val">-1.5</span>
+        </div>
+        <div style="margin-top:12px;">
+          <h4>Activation Function</h4>
+          <div class="act-select">
+            <div class="act-btn active" onclick="setActivation('and','step',this)">Step</div>
+            <div class="act-btn" onclick="setActivation('and','sigmoid',this)">Sigmoid</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="green sm" onclick="trainPerceptron('and')">Train (auto-solve)</button>
+          <button class="outline sm" onclick="resetSliders('and')">Reset</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Model</h4>
+        <div class="math-block" id="and-equation"></div>
+        <h4>Predictions</h4>
+        <table>
+          <thead><tr><th>x₁</th><th>x₂</th><th>Expected</th><th>ŷ (raw)</th><th>ŷ (output)</th><th>Status</th></tr></thead>
+          <tbody id="and-table"></tbody>
+        </table>
+        <div style="margin-top:10px;text-align:center;" id="and-status"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h4>Decision Boundary</h4>
+        <canvas id="and-canvas" width="500" height="500"></canvas>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent-green)"></div> Class 1 (true label)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent-red)"></div> Class 0 (true label)</div>
+          <div class="legend-item"><div class="legend-line" style="background:var(--accent-blue)"></div> Decision boundary</div>
+        </div>
+        <div class="info-box" style="margin-top:4px;">
+          The <strong style="color:var(--accent-blue)">blue dashed line</strong> is the decision boundary where \(w_1 x_1 + w_2 x_2 + b = 0\). The <strong style="color:var(--accent-green)">green region</strong> is classified as 1, the <strong style="color:var(--accent-red)">red region</strong> as 0. Each point shows its <strong>coordinates</strong> and a <strong style="color:var(--accent-green)">green ring</strong> if correctly classified or a <strong style="color:var(--accent-orange)">yellow ring</strong> if wrong.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== TAB 2: XOR ======== -->
+<div id="tab-xor" class="tab-content">
+  <h3>Single Perceptron — XOR Problem <span class="badge" style="background:var(--accent-red)">NOT Linearly Separable</span></h3>
+  <p>XOR outputs 1 when inputs differ. Try as you might, <strong>no single line can separate the two classes</strong>. This is the fundamental limitation Minsky &amp; Papert demonstrated in 1969.</p>
+
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <h4>Parameters</h4>
+        <div class="slider-row">
+          <span class="slider-label">w₁</span>
+          <input type="range" id="xor-w1" min="-5" max="5" step="0.1" value="1">
+          <span class="slider-value" id="xor-w1-val">1.0</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">w₂</span>
+          <input type="range" id="xor-w2" min="-5" max="5" step="0.1" value="1">
+          <span class="slider-value" id="xor-w2-val">1.0</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">b</span>
+          <input type="range" id="xor-b" min="-5" max="5" step="0.1" value="0">
+          <span class="slider-value" id="xor-b-val">0.0</span>
+        </div>
+        <div style="margin-top:12px;">
+          <h4>Activation Function</h4>
+          <div class="act-select">
+            <div class="act-btn active" onclick="setActivation('xor','step',this)">Step</div>
+            <div class="act-btn" onclick="setActivation('xor','sigmoid',this)">Sigmoid</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="red sm" onclick="trainPerceptron('xor')">Try to Train</button>
+          <button class="outline sm" onclick="resetSliders('xor')">Reset</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Model</h4>
+        <div class="math-block" id="xor-equation"></div>
+        <h4>Predictions</h4>
+        <table>
+          <thead><tr><th>x₁</th><th>x₂</th><th>Expected</th><th>ŷ (raw)</th><th>ŷ (output)</th><th>Status</th></tr></thead>
+          <tbody id="xor-table"></tbody>
+        </table>
+        <div style="margin-top:10px;text-align:center;" id="xor-status"></div>
+      </div>
+
+      <div class="info-box warning">
+        <strong>Key insight:</strong> No matter how you adjust the sliders, you can get at most 3 out of 4 correct. A single decision boundary cannot separate opposite corners of a square. This is why we need <strong>neural networks</strong>.
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h4>Decision Boundary</h4>
+        <canvas id="xor-canvas" width="500" height="500"></canvas>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent-green)"></div> Class 1 (true label)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent-red)"></div> Class 0 (true label)</div>
+          <div class="legend-item"><div class="legend-line" style="background:var(--accent-blue)"></div> Decision boundary</div>
+        </div>
+        <div class="info-box error" style="margin-top:4px;">
+          Notice that the two classes (0,0)→0, (1,1)→0 and (0,1)→1, (1,0)→1 sit at <strong>opposite corners</strong>. No single straight line can separate them.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== TAB 3: NEURAL NETWORK ======== -->
+<div id="tab-nn" class="tab-content">
+  <h3>Neural Network — Solving XOR <span class="badge" style="background:var(--accent-purple)">2-Layer Network</span></h3>
+  <p>By adding a hidden layer with 2 neurons (sigmoid activation), the network can solve XOR. This matches the <code>SimpleXOR</code> architecture from the lecture. Explore the trained weights or adjust them manually.</p>
+
+  <div class="card">
+    <h4>Network Architecture</h4>
+    <div class="network-diagram">
+      <div class="layer">
+        <div class="layer-label">Input</div>
+        <div class="neuron input">x₁</div>
+        <div class="neuron input">x₂</div>
+      </div>
+      <div style="color:var(--text2);font-size:.75rem;text-align:center;">
+        <div>→ w, b →</div>
+        <div style="margin-top:8px;">σ(z)</div>
+      </div>
+      <div class="layer">
+        <div class="layer-label">Hidden</div>
+        <div class="neuron hidden">h₁</div>
+        <div class="neuron hidden">h₂</div>
+      </div>
+      <div style="color:var(--text2);font-size:.75rem;text-align:center;">
+        <div>→ w, b →</div>
+        <div style="margin-top:8px;">σ(z)</div>
+      </div>
+      <div class="layer">
+        <div class="layer-label">Output</div>
+        <div class="neuron output">ŷ</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <h4>Hidden Layer — Neuron h₁ (N<sub>1,1</sub>)</h4>
+        <div class="slider-row">
+          <span class="slider-label">w₁</span>
+          <input type="range" id="nn-h1w1" min="-10" max="10" step="0.1" value="-3.6">
+          <span class="slider-value" id="nn-h1w1-val">-3.6</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">w₂</span>
+          <input type="range" id="nn-h1w2" min="-10" max="10" step="0.1" value="3.3">
+          <span class="slider-value" id="nn-h1w2-val">3.3</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">b</span>
+          <input type="range" id="nn-h1b" min="-10" max="10" step="0.1" value="-1.8">
+          <span class="slider-value" id="nn-h1b-val">-1.8</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Hidden Layer — Neuron h₂ (N<sub>1,2</sub>)</h4>
+        <div class="slider-row">
+          <span class="slider-label">w₁</span>
+          <input type="range" id="nn-h2w1" min="-10" max="10" step="0.1" value="-4.6">
+          <span class="slider-value" id="nn-h2w1-val">-4.6</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">w₂</span>
+          <input type="range" id="nn-h2w2" min="-10" max="10" step="0.1" value="4.7">
+          <span class="slider-value" id="nn-h2w2-val">4.7</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">b</span>
+          <input type="range" id="nn-h2b" min="-10" max="10" step="0.1" value="2.6">
+          <span class="slider-value" id="nn-h2b-val">2.6</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Output Layer — Neuron ŷ (N<sub>2,1</sub>)</h4>
+        <div class="slider-row">
+          <span class="slider-label">w₁</span>
+          <input type="range" id="nn-ow1" min="-10" max="10" step="0.1" value="5.3">
+          <span class="slider-value" id="nn-ow1-val">5.3</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">w₂</span>
+          <input type="range" id="nn-ow2" min="-10" max="10" step="0.1" value="-5.0">
+          <span class="slider-value" id="nn-ow2-val">-5.0</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">b</span>
+          <input type="range" id="nn-ob" min="-10" max="10" step="0.1" value="2.2">
+          <span class="slider-value" id="nn-ob-val">2.2</span>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="purple sm" onclick="loadTrainedWeights()">Load Trained Weights</button>
+        <button class="outline sm" onclick="resetNN()">Reset to Zero</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h4>Decision Region</h4>
+        <canvas id="nn-canvas" width="500" height="500"></canvas>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent-green)"></div> Class 1</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent-red)"></div> Class 0</div>
+          <div class="legend-item"><div class="legend-line" style="background:var(--accent-purple)"></div> Decision boundary (ŷ = 0.5)</div>
+        </div>
+        <div class="info-box success" style="margin-top:4px;">
+          The network creates a <strong>non-linear</strong> decision boundary by combining two sigmoid neurons. Each hidden neuron draws its own line; the output neuron combines them.
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Forward Pass</h4>
+        <table>
+          <thead><tr><th>x₁</th><th>x₂</th><th>h₁</th><th>h₂</th><th>ŷ (raw)</th><th>ŷ ≥ 0.5</th><th>Expected</th><th>Status</th></tr></thead>
+          <tbody id="nn-table"></tbody>
+        </table>
+        <div style="margin-top:10px;text-align:center;" id="nn-status"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<script>
+// ============ GLOBALS ============
+const AND_DATA = [[0,0,0],[0,1,0],[1,0,0],[1,1,1]];
+const XOR_DATA = [[0,0,0],[0,1,1],[1,0,1],[1,1,0]];
+const TAB_NAMES = ['intro','and','xor','nn'];
+
+const activations = { and: 'step', xor: 'step' };
+
+function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
+function step(x) { return x >= 0 ? 1 : 0; }
+function activate(x, fn) { return fn === 'sigmoid' ? sigmoid(x) : step(x); }
+
+// ============ TAB SWITCHING ============
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', TAB_NAMES[i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  updateAll();
+}
+
+// ============ ACTIVATION SWITCHING ============
+function setActivation(mode, fn, btn) {
+  activations[mode] = fn;
+  btn.parentElement.querySelectorAll('.act-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateAll();
+}
+
+// ============ SLIDER WIRING ============
+function wireSlider(id, cb) {
+  const el = document.getElementById(id);
+  const valEl = document.getElementById(id + '-val');
+  el.addEventListener('input', () => {
+    valEl.textContent = parseFloat(el.value).toFixed(1);
+    cb();
+  });
+}
+
+function getVal(id) { return parseFloat(document.getElementById(id).value); }
+
+// ============ SHARED CANVAS HELPERS ============
+function setupPlot(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const pad = 60;
+  const plotW = W - 2*pad, plotH = H - 2*pad;
+  const xMin = -0.5, xMax = 1.5;
+  const toX = v => pad + (v - xMin) / (xMax - xMin) * plotW;
+  const toY = v => H - pad - (v - xMin) / (xMax - xMin) * plotH;
+  const fromPxX = px => xMin + (px - pad) / plotW * (xMax - xMin);
+  const fromPxY = py => xMin + (H - pad - py) / plotH * (xMax - xMin);
+  ctx.clearRect(0, 0, W, H);
+  return { canvas, ctx, W, H, pad, plotW, plotH, xMin, xMax, toX, toY, fromPxX, fromPxY };
+}
+
+function drawAxesAndGrid(p) {
+  const { ctx, W, H, pad, toX, toY } = p;
+
+  // Grid lines at 0 and 1 — prominent
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 1;
+  [0, 1].forEach(v => {
+    ctx.beginPath(); ctx.moveTo(toX(v), pad); ctx.lineTo(toX(v), H-pad); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad, toY(v)); ctx.lineTo(W-pad, toY(v)); ctx.stroke();
+  });
+  // Grid at 0.5 — subtle
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  [0.5].forEach(v => {
+    ctx.beginPath(); ctx.moveTo(toX(v), pad); ctx.lineTo(toX(v), H-pad); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad, toY(v)); ctx.lineTo(W-pad, toY(v)); ctx.stroke();
+  });
+
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(pad, H - pad); ctx.lineTo(W - pad, H - pad);
+  ctx.moveTo(pad, H - pad); ctx.lineTo(pad, pad);
+  ctx.stroke();
+
+  // Tick labels
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.font = '13px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  [0, 0.5, 1].forEach(v => {
+    ctx.fillText(v.toFixed(1), toX(v), H - pad + 8);
+  });
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  [0, 0.5, 1].forEach(v => {
+    ctx.fillText(v.toFixed(1), pad - 8, toY(v));
+  });
+
+  // Axis names
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = 'bold 14px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('x₁', W/2, H - 18);
+  ctx.save();
+  ctx.translate(16, H/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('x₂', 0, 0);
+  ctx.restore();
+}
+
+function drawDataPoints(p, data, predictions) {
+  const { ctx, toX, toY } = p;
+
+  data.forEach(([x1, x2, y], i) => {
+    const px = toX(x1), py = toY(x2);
+    const ok = predictions ? predictions[i] : null;
+
+    // Outer correctness ring (large, visible)
+    if (ok !== null) {
+      ctx.beginPath();
+      ctx.arc(px, py, 20, 0, 2*Math.PI);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = ok ? 'rgba(102,187,106,0.9)' : 'rgba(255,167,38,0.9)';
+      ctx.stroke();
+    }
+
+    // Inner circle — true label color
+    ctx.beginPath();
+    ctx.arc(px, py, 13, 0, 2*Math.PI);
+    ctx.fillStyle = y === 1 ? '#66bb6a' : '#ef5350';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#fff';
+    ctx.stroke();
+
+    // Label inside circle
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 13px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(y.toString(), px, py);
+
+    // Coordinate label next to point
+    ctx.font = '12px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    const offsetX = x1 < 0.5 ? -28 : 28;
+    const offsetY = x2 < 0.5 ? 18 : -18;
+    ctx.textAlign = x1 < 0.5 ? 'right' : 'left';
+    ctx.textBaseline = x2 < 0.5 ? 'top' : 'bottom';
+    ctx.fillText(`(${x1},${x2})`, px + offsetX, py + offsetY);
+  });
+}
+
+// ============ PERCEPTRON UPDATE ============
+function updatePerceptron(mode) {
+  const w1 = getVal(mode + '-w1');
+  const w2 = getVal(mode + '-w2');
+  const b  = getVal(mode + '-b');
+  const data = mode === 'and' ? AND_DATA : XOR_DATA;
+  const fn = activations[mode];
+
+  // Equation
+  const eqEl = document.getElementById(mode + '-equation');
+  const fnLabel = fn === 'sigmoid' ? 'σ' : 'step';
+  eqEl.textContent = `ŷ = ${fnLabel}(${w1.toFixed(1)}·x₁ + ${w2.toFixed(1)}·x₂ + (${b.toFixed(1)}))`;
+
+  // Table
+  const tbody = document.getElementById(mode + '-table');
+  tbody.innerHTML = '';
+  let correct = 0;
+  const predictions = [];
+  data.forEach(([x1,x2,y]) => {
+    const z = w1*x1 + w2*x2 + b;
+    const raw = activate(z, fn);
+    const pred = fn === 'sigmoid' ? (raw >= 0.5 ? 1 : 0) : raw;
+    const ok = pred === y;
+    if (ok) correct++;
+    predictions.push(ok);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${x1}</td><td>${x2}</td><td>${y}</td>
+      <td>${raw.toFixed(3)}</td><td>${pred}</td>
+      <td class="${ok?'correct':'incorrect'}">${ok?'✓':'✗'}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Status
+  const statusEl = document.getElementById(mode + '-status');
+  const allCorrect = correct === 4;
+  statusEl.innerHTML = `<span class="status ${allCorrect?'pass':'fail'}">${correct}/4 correct</span>`;
+
+  // Canvas
+  drawPerceptronCanvas(mode, w1, w2, b, data, fn, predictions);
+}
+
+// ============ CANVAS DRAWING ============
+function drawPerceptronCanvas(mode, w1, w2, b, data, fn, predictions) {
+  const p = setupPlot(mode + '-canvas');
+  const { ctx, W, H, pad, plotW, plotH, toX, toY, fromPxX, fromPxY } = p;
+
+  // Decision regions — filled background
+  const res = 3;
+  for (let px = pad; px < W - pad; px += res) {
+    for (let py = pad; py < H - pad; py += res) {
+      const x1 = fromPxX(px);
+      const x2 = fromPxY(py);
+      const z = w1*x1 + w2*x2 + b;
+      const a = activate(z, fn);
+      const val = fn === 'sigmoid' ? a : (a > 0.5 ? 1 : 0);
+      if (val > 0.5) {
+        ctx.fillStyle = `rgba(102,187,106,0.18)`;
+      } else {
+        ctx.fillStyle = `rgba(239,83,80,0.15)`;
+      }
+      ctx.fillRect(px, py, res, res);
+    }
+  }
+
+  drawAxesAndGrid(p);
+
+  // Decision boundary line (w1*x1 + w2*x2 + b = 0)
+  if (Math.abs(w2) > 0.001 || Math.abs(w1) > 0.001) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(pad, pad, plotW, plotH);
+    ctx.clip();
+
+    ctx.strokeStyle = '#4fc3f7';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 5]);
+    ctx.beginPath();
+    if (Math.abs(w2) > 0.001) {
+      const x2atMin = -(w1 * p.xMin + b) / w2;
+      const x2atMax = -(w1 * p.xMax + b) / w2;
+      ctx.moveTo(toX(p.xMin), toY(x2atMin));
+      ctx.lineTo(toX(p.xMax), toY(x2atMax));
+    } else {
+      const xBound = -b / w1;
+      ctx.moveTo(toX(xBound), pad);
+      ctx.lineTo(toX(xBound), H - pad);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  // Data points
+  drawDataPoints(p, data, predictions);
+}
+
+// ============ NEURAL NETWORK ============
+function updateNN() {
+  const h1w1 = getVal('nn-h1w1'), h1w2 = getVal('nn-h1w2'), h1b = getVal('nn-h1b');
+  const h2w1 = getVal('nn-h2w1'), h2w2 = getVal('nn-h2w2'), h2b = getVal('nn-h2b');
+  const ow1  = getVal('nn-ow1'),  ow2  = getVal('nn-ow2'),  ob  = getVal('nn-ob');
+
+  function forward(x1, x2) {
+    const h1 = sigmoid(h1w1*x1 + h1w2*x2 + h1b);
+    const h2 = sigmoid(h2w1*x1 + h2w2*x2 + h2b);
+    const out = sigmoid(ow1*h1 + ow2*h2 + ob);
+    return { h1, h2, out };
+  }
+
+  // Table
+  const tbody = document.getElementById('nn-table');
+  tbody.innerHTML = '';
+  let correct = 0;
+  const predictions = [];
+  XOR_DATA.forEach(([x1, x2, y]) => {
+    const { h1, h2, out } = forward(x1, x2);
+    const pred = out >= 0.5 ? 1 : 0;
+    const ok = pred === y;
+    if (ok) correct++;
+    predictions.push(ok);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${x1}</td><td>${x2}</td>
+      <td>${h1.toFixed(3)}</td><td>${h2.toFixed(3)}</td>
+      <td>${out.toFixed(3)}</td><td>${pred}</td><td>${y}</td>
+      <td class="${ok?'correct':'incorrect'}">${ok?'✓':'✗'}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const statusEl = document.getElementById('nn-status');
+  const allCorrect = correct === 4;
+  statusEl.innerHTML = `<span class="status ${allCorrect?'pass':'fail'}">${correct}/4 correct</span>`;
+
+  // Canvas
+  drawNNCanvas(forward, predictions);
+}
+
+function drawNNCanvas(forward, predictions) {
+  const p = setupPlot('nn-canvas');
+  const { ctx, W, H, pad, plotW, plotH, toX, toY, fromPxX, fromPxY } = p;
+
+  // Heatmap
+  const res = 3;
+  for (let px = pad; px < W - pad; px += res) {
+    for (let py = pad; py < H - pad; py += res) {
+      const x1 = fromPxX(px);
+      const x2 = fromPxY(py);
+      const { out } = forward(x1, x2);
+      if (out > 0.5) {
+        ctx.fillStyle = `rgba(102,187,106,${0.08 + out * 0.22})`;
+      } else {
+        ctx.fillStyle = `rgba(239,83,80,${0.08 + (1-out) * 0.18})`;
+      }
+      ctx.fillRect(px, py, res, res);
+    }
+  }
+
+  // Decision boundary contour (out ≈ 0.5)
+  const contourRes = 2;
+  ctx.fillStyle = 'rgba(171,71,188,0.9)';
+  for (let px = pad; px < W - pad; px += contourRes) {
+    for (let py = pad; py < H - pad; py += contourRes) {
+      const x1 = fromPxX(px);
+      const x2 = fromPxY(py);
+      const { out } = forward(x1, x2);
+      if (Math.abs(out - 0.5) < 0.015) {
+        ctx.fillRect(px, py, contourRes+1, contourRes+1);
+      }
+    }
+  }
+
+  drawAxesAndGrid(p);
+  drawDataPoints(p, XOR_DATA, predictions);
+}
+
+// ============ INTRO CANVASES ============
+function drawIntroCanvas(canvasId, data, showLine) {
+  const p = setupPlot(canvasId);
+  const { ctx, toX, toY } = p;
+  drawAxesAndGrid(p);
+
+  // Draw a sample separating line for AND
+  if (showLine) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(p.pad, p.pad, p.plotW, p.plotH);
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(79,195,247,0.5)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 4]);
+    ctx.beginPath();
+    // Line: x1 + x2 - 1.5 = 0 => x2 = 1.5 - x1
+    const x2at_neg = 1.5 - p.xMin;
+    const x2at_pos = 1.5 - p.xMax;
+    ctx.moveTo(toX(p.xMin), toY(x2at_neg));
+    ctx.lineTo(toX(p.xMax), toY(x2at_pos));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  drawDataPoints(p, data, null);
+}
+
+// ============ TRAIN PERCEPTRON ============
+function trainPerceptron(mode) {
+  if (mode === 'and') {
+    animateSliders(mode, { w1: 1.0, w2: 1.0, b: -1.5 });
+  } else {
+    const lr = 0.1;
+    let w1 = 0, w2 = 0, b = 0;
+    const data = XOR_DATA;
+    const attempts = [];
+
+    for (let epoch = 0; epoch < 50; epoch++) {
+      for (const [x1, x2, y] of data) {
+        const z = w1*x1 + w2*x2 + b;
+        const pred = z >= 0 ? 1 : 0;
+        const err = y - pred;
+        w1 += lr * err * x1;
+        w2 += lr * err * x2;
+        b  += lr * err;
+      }
+      if (epoch % 5 === 0) {
+        attempts.push({ w1: +w1.toFixed(1), w2: +w2.toFixed(1), b: +b.toFixed(1) });
+      }
+    }
+
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i >= attempts.length) { clearInterval(interval); return; }
+      const a = attempts[i];
+      document.getElementById('xor-w1').value = a.w1;
+      document.getElementById('xor-w1-val').textContent = a.w1.toFixed(1);
+      document.getElementById('xor-w2').value = a.w2;
+      document.getElementById('xor-w2-val').textContent = a.w2.toFixed(1);
+      document.getElementById('xor-b').value = a.b;
+      document.getElementById('xor-b-val').textContent = a.b.toFixed(1);
+      updatePerceptron('xor');
+      i++;
+    }, 300);
+  }
+}
+
+function animateSliders(mode, target) {
+  const ids = ['w1','w2','b'];
+  const steps = 20;
+  const current = {};
+  ids.forEach(k => current[k] = getVal(mode + '-' + k));
+
+  let step = 0;
+  const interval = setInterval(() => {
+    step++;
+    const t = step / steps;
+    ids.forEach(k => {
+      const v = current[k] + (target[k] - current[k]) * t;
+      document.getElementById(mode + '-' + k).value = v;
+      document.getElementById(mode + '-' + k + '-val').textContent = v.toFixed(1);
+    });
+    updatePerceptron(mode);
+    if (step >= steps) clearInterval(interval);
+  }, 40);
+}
+
+// ============ RESET ============
+function resetSliders(mode) {
+  const defaults = { w1: 0, w2: 0, b: 0 };
+  Object.entries(defaults).forEach(([k, v]) => {
+    document.getElementById(mode + '-' + k).value = v;
+    document.getElementById(mode + '-' + k + '-val').textContent = v.toFixed(1);
+  });
+  updatePerceptron(mode);
+}
+
+function loadTrainedWeights() {
+  const weights = {
+    'nn-h1w1': -3.57, 'nn-h1w2': 3.28, 'nn-h1b': -1.75,
+    'nn-h2w1': -4.64, 'nn-h2w2': 4.67, 'nn-h2b': 2.62,
+    'nn-ow1': 5.28, 'nn-ow2': -4.96, 'nn-ob': 2.22
+  };
+  Object.entries(weights).forEach(([id, v]) => {
+    document.getElementById(id).value = v;
+    document.getElementById(id + '-val').textContent = v.toFixed(1);
+  });
+  updateNN();
+}
+
+function resetNN() {
+  const ids = ['nn-h1w1','nn-h1w2','nn-h1b','nn-h2w1','nn-h2w2','nn-h2b','nn-ow1','nn-ow2','nn-ob'];
+  ids.forEach(id => {
+    document.getElementById(id).value = 0;
+    document.getElementById(id + '-val').textContent = '0.0';
+  });
+  updateNN();
+}
+
+// ============ INIT ============
+function updateAll() {
+  updatePerceptron('and');
+  updatePerceptron('xor');
+  updateNN();
+  drawIntroCanvas('intro-and-canvas', AND_DATA, true);
+  drawIntroCanvas('intro-xor-canvas', XOR_DATA, false);
+}
+
+// Wire all sliders
+['and-w1','and-w2','and-b'].forEach(id => wireSlider(id, () => updatePerceptron('and')));
+['xor-w1','xor-w2','xor-b'].forEach(id => wireSlider(id, () => updatePerceptron('xor')));
+['nn-h1w1','nn-h1w2','nn-h1b','nn-h2w1','nn-h2w2','nn-h2b','nn-ow1','nn-ow2','nn-ob'].forEach(id => wireSlider(id, updateNN));
+
+// Initial render
+updateAll();
+
+// KaTeX
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof renderMathInElement === 'function') {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '\\(', right: '\\)', display: false},
+        {left: '$', right: '$', display: false}
+      ]
+    });
+  }
+});
+</script>
+</body>
+</html>

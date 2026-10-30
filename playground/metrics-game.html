@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Model Metrics Challenge</title>
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-light: #818cf8;
+    --primary-lighter: #c7d2fe;
+    --primary-lightest: #eef2ff;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--gray-50);
+    color: var(--gray-900);
+    line-height: 1.6;
+  }
+
+  header {
+    background: linear-gradient(135deg, #0f766e, #0d9488);
+    color: white;
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  header h1 { font-size: 1.6rem; font-weight: 700; }
+  header p { opacity: 0.9; font-size: 0.95rem; }
+
+  .header-stats {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .stat-box {
+    text-align: center;
+    background: rgba(255,255,255,0.15);
+    padding: 0.4rem 1rem;
+    border-radius: 8px;
+  }
+
+  .stat-box .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85; }
+  .stat-box .value { font-size: 1.4rem; font-weight: 700; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+
+  /* Screens */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* Start screen */
+  .start-screen {
+    text-align: center;
+    padding: 3rem 1rem;
+  }
+
+  .start-screen h2 { font-size: 2rem; color: var(--gray-900); margin-bottom: 1rem; }
+  .start-screen p { font-size: 1.1rem; color: var(--gray-500); max-width: 600px; margin: 0 auto 2rem; }
+
+  .mode-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.25rem;
+    max-width: 850px;
+    margin: 0 auto;
+  }
+
+  .mode-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    cursor: pointer;
+    border: 2px solid var(--gray-200);
+    transition: all 0.2s;
+    text-align: left;
+  }
+
+  .mode-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .mode-card .icon { font-size: 2rem; margin-bottom: 0.75rem; }
+  .mode-card h3 { font-size: 1.1rem; margin-bottom: 0.4rem; }
+  .mode-card p { font-size: 0.85rem; color: var(--gray-500); }
+
+  /* Game screen */
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .round-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .round-badge {
+    background: var(--primary);
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .difficulty-badge {
+    padding: 0.3rem 0.8rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .difficulty-badge.easy { background: #dcfce7; color: #166534; }
+  .difficulty-badge.medium { background: #fef3c7; color: #92400e; }
+  .difficulty-badge.hard { background: #fee2e2; color: #991b1b; }
+
+  .scenario-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--gray-900); }
+
+  .scenario-context {
+    background: var(--gray-50);
+    border-left: 4px solid var(--primary);
+    padding: 1rem;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 1.25rem;
+    font-size: 0.95rem;
+  }
+
+  .scenario-context strong { color: var(--primary); }
+
+  .hint-box {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.85rem;
+    color: #92400e;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .hint-box .hint-content { display: none; margin-top: 0.5rem; }
+  .hint-box.revealed .hint-content { display: block; }
+
+  .models-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .model-card {
+    border: 2.5px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .model-card:hover:not(.disabled) { border-color: var(--primary-light); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+
+  .model-card.selected { border-color: var(--primary); background: var(--primary-lightest); }
+  .model-card.correct { border-color: var(--success); background: #f0fdf4; }
+  .model-card.wrong { border-color: var(--danger); background: #fef2f2; }
+  .model-card.disabled { cursor: default; opacity: 0.85; }
+  .model-card.disabled:hover { transform: none; box-shadow: none; }
+
+  .model-card .model-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .model-card .model-type {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--gray-100);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    color: var(--gray-500);
+    font-weight: 600;
+  }
+
+  .metrics-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  .metrics-table th {
+    text-align: left;
+    padding: 0.4rem 0.5rem;
+    color: var(--gray-500);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .metrics-table td {
+    padding: 0.4rem 0.5rem;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    border-bottom: 1px solid var(--gray-100);
+  }
+
+  .metrics-table td.metric-name {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-weight: 500;
+    color: var(--gray-700);
+  }
+
+  .val-good { color: var(--success); }
+  .val-ok { color: var(--warning); }
+  .val-bad { color: var(--danger); }
+
+  .confusion-matrix {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr;
+    grid-template-rows: auto 1fr 1fr;
+    gap: 2px;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+    max-width: 200px;
+  }
+
+  .cm-cell {
+    padding: 0.35rem;
+    text-align: center;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  .cm-header { background: var(--gray-100); color: var(--gray-500); font-size: 0.7rem; }
+  .cm-corner { background: transparent; }
+  .cm-tp { background: #dcfce7; color: #166534; }
+  .cm-tn { background: #dbeafe; color: #1e40af; }
+  .cm-fp { background: #fee2e2; color: #991b1b; }
+  .cm-fn { background: #fef3c7; color: #92400e; }
+
+  .btn {
+    padding: 0.6rem 1.25rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover:not(:disabled) { background: #4338ca; }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { background: #16a34a; }
+  .btn-outline { background: white; border: 1.5px solid var(--primary); color: var(--primary); }
+  .btn-outline:hover { background: var(--primary-lightest); }
+  .btn-lg { padding: 0.8rem 2rem; font-size: 1rem; }
+
+  .btn-group { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+
+  .feedback-box {
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-top: 1rem;
+    display: none;
+  }
+
+  .feedback-box.show { display: block; }
+  .feedback-box.correct-fb { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .feedback-box.wrong-fb { background: #fef2f2; border: 1px solid #fecaca; }
+
+  .feedback-box h4 { margin-bottom: 0.5rem; }
+  .feedback-box.correct-fb h4 { color: #166534; }
+  .feedback-box.wrong-fb h4 { color: #991b1b; }
+
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--gray-200);
+    border-radius: 3px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0d9488, #14b8a6);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+
+  /* Results screen */
+  .results-screen { text-align: center; padding: 2rem 1rem; }
+  .results-screen h2 { font-size: 2rem; margin-bottom: 0.5rem; }
+
+  .score-circle {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 1.5rem auto;
+    font-weight: 700;
+    border: 6px solid;
+  }
+
+  .score-circle .big { font-size: 2.5rem; }
+  .score-circle .small { font-size: 0.85rem; opacity: 0.8; }
+
+  .score-circle.great { border-color: var(--success); color: var(--success); background: #f0fdf4; }
+  .score-circle.ok { border-color: var(--warning); color: var(--warning); background: #fffbeb; }
+  .score-circle.poor { border-color: var(--danger); color: var(--danger); background: #fef2f2; }
+
+  .review-card {
+    text-align: left;
+    border-left: 4px solid;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    background: white;
+    border-radius: 0 8px 8px 0;
+  }
+
+  .review-card.was-correct { border-color: var(--success); }
+  .review-card.was-wrong { border-color: var(--danger); }
+  .review-card .review-q { font-weight: 600; margin-bottom: 0.25rem; font-size: 0.95rem; }
+  .review-card .review-a { font-size: 0.85rem; color: var(--gray-500); }
+
+  /* Reference tab */
+  .ref-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--gray-200);
+  }
+
+  .ref-tab {
+    padding: 0.5rem 1rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--gray-500);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+  }
+
+  .ref-tab:hover { color: #0d9488; }
+  .ref-tab.active { color: #0d9488; border-bottom-color: #0d9488; }
+
+  .ref-content { display: none; }
+  .ref-content.active { display: block; }
+
+  .formula-box {
+    background: var(--primary-lightest);
+    border: 1px solid var(--primary-lighter);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-family: 'Courier New', monospace;
+    text-align: center;
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+  }
+
+  .info-box {
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    font-size: 0.85rem;
+  }
+
+  .info-box.tip { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+  .info-box.info { background: var(--primary-lightest); border: 1px solid var(--primary-lighter); color: #3730a3; }
+
+  .timer-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #14b8a6, #0d9488);
+    z-index: 100;
+    transition: width 0.1s linear;
+  }
+
+  @media (max-width: 768px) {
+    .models-grid { grid-template-columns: 1fr; }
+    header { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="timer-bar" id="timerBar" style="width:0%;display:none;"></div>
+
+<header>
+  <div>
+    <h1>Model Metrics Challenge</h1>
+    <p>CSDS-352 — Pick the best model for each scenario</p>
+  </div>
+  <div class="header-stats" id="headerStats" style="display:none;">
+    <div class="stat-box"><div class="label">Score</div><div class="value" id="scoreDisplay">0</div></div>
+    <div class="stat-box"><div class="label">Round</div><div class="value" id="roundDisplay">1/8</div></div>
+    <div class="stat-box"><div class="label">Streak</div><div class="value" id="streakDisplay">0</div></div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- START SCREEN -->
+  <div class="screen active" id="startScreen">
+    <div class="start-screen">
+      <h2>Choose Your Challenge</h2>
+      <p>You'll be presented with real-world scenarios and competing models. Your job: read the metrics, understand the context, and pick the best model.</p>
+      <div class="mode-cards">
+        <div class="mode-card" onclick="startGame('regression')">
+          <div class="icon">&#x1F4C8;</div>
+          <h3>Regression Metrics</h3>
+          <p>MSE, RMSE, MAE, and R² — predict continuous values and pick the model that best fits the data.</p>
+        </div>
+        <div class="mode-card" onclick="startGame('classification')">
+          <div class="icon">&#x1F3AF;</div>
+          <h3>Classification Metrics</h3>
+          <p>Accuracy, Precision, Recall, and F1 — navigate confusion matrices and class imbalance traps.</p>
+        </div>
+        <div class="mode-card" onclick="startGame('mixed')">
+          <div class="icon">&#x1F9E0;</div>
+          <h3>Full Challenge</h3>
+          <p>Both regression and classification scenarios mixed together. The complete data scientist test!</p>
+        </div>
+      </div>
+
+      <!-- Reference toggle -->
+      <div style="margin-top:2.5rem;">
+        <button class="btn btn-outline" onclick="toggleReference()">Show / Hide Metrics Reference</button>
+        <div id="referencePanel" style="display:none;margin-top:1rem;text-align:left;">
+          <div class="card">
+            <div class="ref-tabs">
+              <button class="ref-tab active" data-ref="reg" onclick="switchRef(this,'reg')">Regression</button>
+              <button class="ref-tab" data-ref="cls" onclick="switchRef(this,'cls')">Classification</button>
+            </div>
+            <div class="ref-content active" id="ref-reg">
+              <div class="formula-box">MSE = (1/n) &Sigma;(y&#x1D62; - &#x177;&#x1D62;)&sup2;</div>
+              <p style="font-size:0.85rem;margin:0.25rem 0;">Average squared error. Lower = better. Penalizes large errors heavily.</p>
+              <div class="formula-box">RMSE = &radic;MSE</div>
+              <p style="font-size:0.85rem;margin:0.25rem 0;">Same units as the target variable. Easier to interpret than MSE.</p>
+              <div class="formula-box">MAE = (1/n) &Sigma;|y&#x1D62; - &#x177;&#x1D62;|</div>
+              <p style="font-size:0.85rem;margin:0.25rem 0;">Average absolute error. More robust to outliers than MSE/RMSE.</p>
+              <div class="formula-box">R&sup2; = 1 - (&Sigma;(y&#x1D62; - &#x177;&#x1D62;)&sup2;) / (&Sigma;(y&#x1D62; - &#x0233;)&sup2;)</div>
+              <p style="font-size:0.85rem;margin:0.25rem 0;">Proportion of variance explained. Closer to 1 = better. 0 = no better than predicting the mean.</p>
+              <div class="info-box tip">
+                <strong>Overfitting signal:</strong> Train R&sup2; &gt; 0.95 but Test R&sup2; &lt; 0.5 usually means overfitting.
+              </div>
+            </div>
+            <div class="ref-content" id="ref-cls">
+              <div class="formula-box">Accuracy = (TP + TN) / (TP + TN + FP + FN)</div>
+              <p style="font-size:0.85rem;margin:0.25rem 0;">Overall correctness. Can be misleading with imbalanced classes!</p>
+              <div class="formula-box">Precision = TP / (TP + FP)</div>
+              <p style="font-size:0.85rem;margin:0.25rem 0;">"Of all predicted positives, how many were correct?" High precision = few false alarms.</p>
+              <div class="formula-box">Recall = TP / (TP + FN)</div>
+              <p style="font-size:0.85rem;margin:0.25rem 0;">"Of all actual positives, how many did we catch?" High recall = few missed cases.</p>
+              <div class="formula-box">F1 = 2 &times; (Precision &times; Recall) / (Precision + Recall)</div>
+              <p style="font-size:0.85rem;margin:0.25rem 0;">Harmonic mean — balances precision and recall. Best when both matter.</p>
+              <div class="info-box tip">
+                <strong>When accuracy lies:</strong> With 95% negative / 5% positive data, a model that always predicts "negative" gets 95% accuracy but 0% recall!
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div class="screen" id="gameScreen">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div id="scenarioContainer"></div>
+    <div class="feedback-box" id="feedbackBox">
+      <h4 id="feedbackTitle"></h4>
+      <p id="feedbackText"></p>
+    </div>
+    <div class="btn-group" style="margin-top:1.25rem;" id="gameActions">
+      <button class="btn btn-primary btn-lg" id="confirmBtn" onclick="confirmChoice()" disabled>Confirm Choice</button>
+    </div>
+  </div>
+
+  <!-- RESULTS SCREEN -->
+  <div class="screen" id="resultsScreen">
+    <div class="results-screen">
+      <h2 id="resultsTitle"></h2>
+      <p id="resultsSubtitle" style="color:var(--gray-500);font-size:1.05rem;"></p>
+      <div id="scoreCircle"></div>
+      <div style="text-align:left;max-width:700px;margin:1.5rem auto;" id="reviewList"></div>
+      <div class="btn-group" style="margin-top:2rem;">
+        <button class="btn btn-primary btn-lg" onclick="location.reload()">Play Again</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ==================== Scenario Data ====================
+
+const regressionScenarios = [
+  {
+    title: "Predicting House Prices",
+    context: "A real estate company wants to predict house sale prices in a suburban area. Prices range from $100K to $900K. They need the model to be reliable on <strong>new listings</strong> they haven't seen before. Two data scientists each trained a model.",
+    hint: "Pay attention to the gap between training and test metrics. A model that performs amazingly on training data but poorly on test data has likely memorized the training set.",
+    difficulty: "easy",
+    models: [
+      {
+        name: "Model A", type: "Linear Regression",
+        metrics: { "Train MSE": 850, "Test MSE": 920, "Train R²": 0.82, "Test R²": 0.80, "Train MAE": 22.1, "Test MAE": 23.5 }
+      },
+      {
+        name: "Model B", type: "Polynomial (deg 15)",
+        metrics: { "Train MSE": 45, "Test MSE": 12500, "Train R²": 0.99, "Test R²": 0.15, "Train MAE": 4.2, "Test MAE": 89.3 }
+      }
+    ],
+    correct: 0,
+    explanation: "<strong>Model A</strong> is the clear winner. Model B has a near-perfect Train R&sup2; of 0.99 but a terrible Test R&sup2; of 0.15 — a textbook case of <strong>overfitting</strong>. The degree-15 polynomial memorized the training data (including its noise) but fails completely on new data. Model A's consistent train/test performance (R&sup2; &asymp; 0.80-0.82) shows it <strong>generalizes</strong> well."
+  },
+  {
+    title: "Forecasting Daily Energy Consumption",
+    context: "A utility company needs to predict daily electricity consumption (in MWh) to plan power generation. Overestimating wastes resources; underestimating causes outages. Predictions must be as close as possible on <strong>average</strong>, and <strong>large errors are especially costly</strong>.",
+    hint: "When large errors are costly, pay attention to both MSE (penalizes large errors quadratically) and MAE (average error). RMSE amplifies the impact of outlier errors compared to MAE — a big gap between them signals some very bad predictions.",
+    difficulty: "medium",
+    models: [
+      {
+        name: "Model A", type: "Decision Tree",
+        metrics: { "Test MSE": 2500, "Test RMSE": 50.0, "Test MAE": 42.0, "Test R²": 0.78 }
+      },
+      {
+        name: "Model B", type: "Gradient Boosting",
+        metrics: { "Test MSE": 1800, "Test RMSE": 42.4, "Test MAE": 35.2, "Test R²": 0.84 }
+      },
+      {
+        name: "Model C", type: "Linear Regression",
+        metrics: { "Test MSE": 2100, "Test RMSE": 45.8, "Test MAE": 28.5, "Test R²": 0.81 }
+      }
+    ],
+    correct: 1,
+    explanation: "<strong>Model B (Gradient Boosting)</strong> is the best overall choice. It has the lowest MSE (1800) and highest R&sup2; (0.84), meaning it explains the most variance and has the smallest squared errors — critical when <strong>large errors are costly</strong>. Model C has a lower MAE, suggesting it's better on average, but its higher MSE means it occasionally produces large errors that could cause outages. Model B strikes the best balance."
+  },
+  {
+    title: "Predicting Student Exam Scores",
+    context: "A university wants to <strong>identify students at risk of failing</strong> (score &lt; 60). The model predicts the actual numeric score. Scores range from 0 to 100. The most important thing is that the model is <strong>accurate near the failing threshold</strong>, not that it perfectly predicts top scorers.",
+    hint: "MAE treats all errors equally regardless of magnitude. R&sup2; and MSE tell you about overall fit. Think about what metric best reflects 'consistently close' predictions near the pass/fail boundary.",
+    difficulty: "medium",
+    models: [
+      {
+        name: "Model A", type: "Ridge Regression",
+        metrics: { "Test MSE": 64, "Test RMSE": 8.0, "Test MAE": 6.2, "Test R²": 0.76, "Errors near 60 (MAE)": 5.1 }
+      },
+      {
+        name: "Model B", type: "Random Forest",
+        metrics: { "Test MSE": 49, "Test RMSE": 7.0, "Test MAE": 5.8, "Test R²": 0.82, "Errors near 60 (MAE)": 8.7 }
+      }
+    ],
+    correct: 0,
+    explanation: "<strong>Model A (Ridge Regression)</strong> is the better choice for this use case. While Model B has better overall metrics (lower MSE, higher R&sup2;), Model A has a much lower <strong>MAE near the failing threshold</strong> (5.1 vs 8.7). Since the goal is to reliably identify at-risk students, accuracy near 60 matters more than perfectly predicting who scores 95 vs 98. This scenario teaches that <strong>the best model depends on the business goal</strong>, not just aggregate metrics."
+  },
+  {
+    title: "Predicting Delivery Times",
+    context: "An e-commerce company wants to show estimated delivery times to customers. Delivery times range from 1 to 14 days. The company cares about <strong>giving realistic estimates</strong> — they'd rather be consistently off by 1 day than usually perfect but occasionally off by 5 days. Customers hate surprises.",
+    hint: "MAE measures typical error size. RMSE penalizes large errors more. When consistency matters more than occasional perfection, think about which metric rewards that.",
+    difficulty: "medium",
+    models: [
+      {
+        name: "Model A", type: "XGBoost",
+        metrics: { "Test RMSE": 1.2, "Test MAE": 0.7, "Test R²": 0.89 }
+      },
+      {
+        name: "Model B", type: "Neural Network",
+        metrics: { "Test RMSE": 1.8, "Test MAE": 0.6, "Test R²": 0.85 }
+      }
+    ],
+    correct: 1,
+    explanation: "<strong>Model B (Neural Network)</strong> is the better fit here despite lower R&sup2; and higher RMSE. The key insight: Model B has a <strong>lower MAE (0.6 vs 0.7)</strong>, meaning its typical prediction is closer. But its <strong>higher RMSE (1.8 vs 1.2)</strong> means... wait — that's actually <em>worse</em> for outliers. However, the problem states the company values <strong>consistent, realistic estimates</strong>. Model B's lower MAE means most customers get a more accurate estimate. The larger RMSE gap (1.8 vs MAE 0.6) suggests a few outliers, but on <em>most</em> orders, Model B is more reliable. When consistency matters most, <strong>MAE is your guide</strong>."
+  },
+  {
+    title: "Estimating Crop Yield",
+    context: "An agricultural research lab is predicting crop yield (tons/hectare) from soil and weather data. They have <strong>very limited data</strong> (only 30 samples) and want a model that won't degrade when applied to new farms. They're comparing a simple and a complex model.",
+    hint: "With limited data, complex models are more prone to overfitting. Compare the train vs test gap.",
+    difficulty: "easy",
+    models: [
+      {
+        name: "Model A", type: "Linear (3 features)",
+        metrics: { "Train R²": 0.72, "Test R²": 0.68, "Train RMSE": 0.85, "Test RMSE": 0.92 }
+      },
+      {
+        name: "Model B", type: "Neural Net (500 params)",
+        metrics: { "Train R²": 0.98, "Test R²": 0.41, "Train RMSE": 0.18, "Test RMSE": 1.55 }
+      }
+    ],
+    correct: 0,
+    explanation: "<strong>Model A</strong> is the right choice. With only 30 data points, Model B's 500 parameters dramatically overfit — it nearly memorizes the training data (R&sup2; = 0.98) but fails on test data (R&sup2; = 0.41). Model A's small train-test gap (0.72 vs 0.68) shows stable generalization. <strong>Rule of thumb:</strong> when data is scarce, simpler models with fewer parameters tend to generalize better."
+  }
+];
+
+const classificationScenarios = [
+  {
+    title: "Email Spam Detection",
+    context: "An email provider is building a spam filter. <strong>False positives are very costly</strong> — marking a legitimate email as spam means the user might miss an important message. Some spam getting through (false negatives) is annoying but tolerable.",
+    hint: "When false positives are costly, which metric specifically measures 'of all items flagged as positive, how many were correct?'",
+    difficulty: "easy",
+    models: [
+      {
+        name: "Model A", type: "Naive Bayes",
+        metrics: { "Accuracy": 0.94, "Precision": 0.99, "Recall": 0.72, "F1": 0.83 },
+        cm: { tp: 360, fp: 4, fn: 140, tn: 4496 }
+      },
+      {
+        name: "Model B", type: "SVM",
+        metrics: { "Accuracy": 0.96, "Precision": 0.88, "Recall": 0.95, "F1": 0.91 },
+        cm: { tp: 475, fp: 65, fn: 25, tn: 4435 }
+      }
+    ],
+    correct: 0,
+    explanation: "<strong>Model A (Naive Bayes)</strong> is the right choice. Its <strong>precision of 0.99</strong> means that when it flags an email as spam, it's almost always right (only 4 false positives!). Model B catches more spam (recall 0.95 vs 0.72) and even has higher accuracy and F1, but its 65 false positives mean 65 legitimate emails going to spam — unacceptable per the business requirements. <strong>Lesson:</strong> higher accuracy and F1 don't always mean the better model. The right metric depends on the cost of each type of error."
+  },
+  {
+    title: "Cancer Screening Test",
+    context: "A hospital is deploying an AI to screen mammograms for breast cancer. This is a <strong>preliminary screening</strong> — positive cases get a follow-up biopsy. <strong>Missing a cancer case (false negative) could be fatal.</strong> False positives lead to unnecessary biopsies — stressful but not dangerous.",
+    hint: "When missing a positive case is the worst outcome, which metric measures 'of all actual positive cases, how many did we detect?'",
+    difficulty: "easy",
+    models: [
+      {
+        name: "Model A", type: "CNN v1",
+        metrics: { "Accuracy": 0.97, "Precision": 0.85, "Recall": 0.78, "F1": 0.81 },
+        cm: { tp: 78, fp: 14, fn: 22, tn: 886 }
+      },
+      {
+        name: "Model B", type: "CNN v2",
+        metrics: { "Accuracy": 0.95, "Precision": 0.62, "Recall": 0.97, "F1": 0.76 },
+        cm: { tp: 97, fp: 60, fn: 3, tn: 840 }
+      }
+    ],
+    correct: 1,
+    explanation: "<strong>Model B (CNN v2)</strong> is the right choice for medical screening. Its <strong>recall of 0.97</strong> means it catches 97 out of 100 cancer cases, missing only 3. Model A misses 22 out of 100 — those 22 patients walk away with undetected cancer. Yes, Model B has more false positives (60 unnecessary biopsies), and its accuracy and F1 are lower, but in medicine, <strong>recall saves lives</strong>. The cost of a false negative (missed cancer) far outweighs the cost of a false positive (extra biopsy)."
+  },
+  {
+    title: "The Accuracy Trap",
+    context: "A bank is detecting fraudulent transactions. Only <strong>2% of transactions are fraudulent</strong>. Two models were evaluated on 10,000 test transactions (200 fraud, 9800 legitimate). The bank wants to <strong>catch as much fraud as possible</strong> while keeping false alarms manageable.",
+    hint: "With a 98%/2% class split, think about what happens if a model simply predicts 'not fraud' for everything. What accuracy would it get?",
+    difficulty: "medium",
+    models: [
+      {
+        name: "Model A", type: "Logistic Regression",
+        metrics: { "Accuracy": 0.98, "Precision": 0.00, "Recall": 0.00, "F1": 0.00 },
+        cm: { tp: 0, fp: 0, fn: 200, tn: 9800 }
+      },
+      {
+        name: "Model B", type: "Random Forest",
+        metrics: { "Accuracy": 0.96, "Precision": 0.67, "Recall": 0.82, "F1": 0.74 },
+        cm: { tp: 164, fp: 80, fn: 36, tn: 9720 }
+      },
+      {
+        name: "Model C", type: "Gradient Boosting",
+        metrics: { "Accuracy": 0.97, "Precision": 0.78, "Recall": 0.75, "F1": 0.76 },
+        cm: { tp: 150, fp: 42, fn: 50, tn: 9758 }
+      }
+    ],
+    correct: 1,
+    explanation: "<strong>Model B (Random Forest)</strong> is the best choice. This scenario is a classic <strong>accuracy trap</strong>: Model A has the <em>highest</em> accuracy (98%) but it's completely useless — it never predicts fraud! It just always says 'not fraud' and rides the class imbalance to 98% accuracy. Model B catches 164 out of 200 fraud cases (recall 0.82) with reasonable precision (0.67). Model C has higher precision but catches fewer frauds (recall 0.75). Since the bank wants to <strong>catch as much fraud as possible</strong>, Model B's higher recall wins."
+  },
+  {
+    title: "Content Moderation",
+    context: "A social media platform is building an automated content moderation system to flag toxic comments. The platform wants to <strong>balance two goals</strong>: remove as much toxic content as possible, but avoid over-censoring legitimate speech. Neither false positives nor false negatives are clearly 'worse' — both harm user trust.",
+    hint: "When both precision and recall are equally important, there's a single metric that balances them...",
+    difficulty: "easy",
+    models: [
+      {
+        name: "Model A", type: "BERT Fine-tuned",
+        metrics: { "Accuracy": 0.91, "Precision": 0.83, "Recall": 0.87, "F1": 0.85 },
+        cm: { tp: 435, fp: 90, fn: 65, tn: 4410 }
+      },
+      {
+        name: "Model B", type: "Keyword Filter",
+        metrics: { "Accuracy": 0.89, "Precision": 0.72, "Recall": 0.92, "F1": 0.81 },
+        cm: { tp: 460, fp: 179, fn: 40, tn: 4321 }
+      },
+      {
+        name: "Model C", type: "Ensemble",
+        metrics: { "Accuracy": 0.90, "Precision": 0.90, "Recall": 0.76, "F1": 0.82 },
+        cm: { tp: 380, fp: 42, fn: 120, tn: 4458 }
+      }
+    ],
+    correct: 0,
+    explanation: "<strong>Model A (BERT)</strong> is the best choice when both types of errors matter equally. Its <strong>F1 score of 0.85</strong> is the highest, meaning it achieves the best <em>balance</em> of precision (0.83) and recall (0.87). Model B catches more toxic comments (recall 0.92) but over-censors too much (precision 0.72). Model C is very precise (0.90) but misses too many toxic posts (recall 0.76). <strong>F1 is the go-to metric when precision and recall are equally important.</strong>"
+  },
+  {
+    title: "Manufacturing Defect Detection",
+    context: "A factory inspects products on a conveyor belt. <strong>Shipping a defective product costs $500</strong> in returns and reputation damage. <strong>Flagging a good product for re-inspection costs $10</strong>. The defect rate is about 5%. The factory wants to <strong>minimize total cost</strong>.",
+    hint: "Think about costs: a false negative (missed defect) costs $500, a false positive (unnecessary re-inspection) costs $10. Calculate the total cost for each model using: Cost = FN × $500 + FP × $10.",
+    difficulty: "hard",
+    models: [
+      {
+        name: "Model A", type: "High Recall Model",
+        metrics: { "Accuracy": 0.93, "Precision": 0.55, "Recall": 0.96, "F1": 0.70 },
+        cm: { tp: 48, fp: 39, fn: 2, tn: 911 }
+      },
+      {
+        name: "Model B", type: "Balanced Model",
+        metrics: { "Accuracy": 0.97, "Precision": 0.83, "Recall": 0.80, "F1": 0.81 },
+        cm: { tp: 40, fp: 8, fn: 10, tn: 942 }
+      },
+      {
+        name: "Model C", type: "High Precision Model",
+        metrics: { "Accuracy": 0.96, "Precision": 0.92, "Recall": 0.70, "F1": 0.80 },
+        cm: { tp: 35, fp: 3, fn: 15, tn: 947 }
+      }
+    ],
+    correct: 0,
+    explanation: "<strong>Model A</strong> minimizes total cost. Let's calculate:<br><br>Model A: 2 × $500 + 39 × $10 = <strong>$1,390</strong><br>Model B: 10 × $500 + 8 × $10 = <strong>$5,080</strong><br>Model C: 15 × $500 + 3 × $10 = <strong>$7,530</strong><br><br>Model A's high recall (0.96) means it catches almost all defects — only 2 slip through at $500 each. The 39 false positives only cost $10 each. Despite having the lowest accuracy (0.93) and F1 (0.70), it has the <strong>lowest business cost</strong>. <strong>Lesson:</strong> real-world model selection often requires translating metrics into business impact."
+  },
+  {
+    title: "Overfitting in Classification",
+    context: "A data science team is classifying customer churn (will they leave or stay?). They have a <strong>small dataset of 500 customers</strong> and are comparing two models. They need the model to work well on <strong>future customers</strong>, not just the training set.",
+    hint: "Look at both training AND test metrics. A large gap is a red flag.",
+    difficulty: "easy",
+    models: [
+      {
+        name: "Model A", type: "Deep Neural Net",
+        metrics: { "Train Accuracy": 0.99, "Test Accuracy": 0.68, "Train F1": 0.99, "Test F1": 0.61 }
+      },
+      {
+        name: "Model B", type: "Logistic Regression",
+        metrics: { "Train Accuracy": 0.82, "Test Accuracy": 0.79, "Train F1": 0.80, "Test F1": 0.77 }
+      }
+    ],
+    correct: 1,
+    explanation: "<strong>Model B (Logistic Regression)</strong> is the right choice. Model A shows extreme <strong>overfitting</strong>: 99% training accuracy vs 68% test accuracy — a 31-point gap! The deep neural network has too many parameters for just 500 samples and memorized the training data. Model B's small train-test gap (82% → 79%) shows stable generalization. This pattern mirrors what we saw with regularization: <strong>simpler models generalize better when data is limited</strong>."
+  }
+];
+
+// ==================== Game State ====================
+let currentMode = 'mixed';
+let scenarios = [];
+let currentRound = 0;
+let score = 0;
+let streak = 0;
+let maxStreak = 0;
+let selectedModel = -1;
+let answered = false;
+let results = [];
+let timerInterval = null;
+let timeLeft = 0;
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startGame(mode) {
+  currentMode = mode;
+  let pool;
+  if (mode === 'regression') pool = regressionScenarios;
+  else if (mode === 'classification') pool = classificationScenarios;
+  else pool = [...regressionScenarios, ...classificationScenarios];
+
+  scenarios = shuffleArray(pool).slice(0, Math.min(pool.length, 8));
+  currentRound = 0;
+  score = 0;
+  streak = 0;
+  maxStreak = 0;
+  results = [];
+
+  document.getElementById('startScreen').classList.remove('active');
+  document.getElementById('gameScreen').classList.add('active');
+  document.getElementById('headerStats').style.display = 'flex';
+
+  loadRound();
+}
+
+function loadRound() {
+  const s = scenarios[currentRound];
+  selectedModel = -1;
+  answered = false;
+
+  document.getElementById('scoreDisplay').textContent = score;
+  document.getElementById('roundDisplay').textContent = `${currentRound + 1}/${scenarios.length}`;
+  document.getElementById('streakDisplay').textContent = streak;
+  document.getElementById('progressFill').style.width = `${(currentRound / scenarios.length) * 100}%`;
+
+  const confirmBtn = document.getElementById('confirmBtn');
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = 'Confirm Choice';
+  confirmBtn.className = 'btn btn-primary btn-lg';
+  confirmBtn.onclick = confirmChoice;
+
+  const fb = document.getElementById('feedbackBox');
+  fb.classList.remove('show', 'correct-fb', 'wrong-fb');
+
+  let html = `
+    <div class="card">
+      <div class="round-header">
+        <span class="round-badge">Round ${currentRound + 1} of ${scenarios.length}</span>
+        <span class="difficulty-badge ${s.difficulty}">${s.difficulty}</span>
+      </div>
+      <div class="scenario-title">${s.title}</div>
+      <div class="scenario-context">${s.context}</div>
+      <div class="hint-box" onclick="this.classList.toggle('revealed')">
+        <strong>&#x1F4A1; Hint</strong> (click to reveal)
+        <div class="hint-content">${s.hint}</div>
+      </div>
+      <div class="models-grid">
+  `;
+
+  s.models.forEach((m, i) => {
+    html += `
+      <div class="model-card" id="model-${i}" onclick="selectModel(${i})">
+        <div class="model-name">${m.name} <span class="model-type">${m.type}</span></div>
+        <table class="metrics-table">
+          <tr><th>Metric</th><th>Value</th></tr>
+    `;
+
+    for (const [key, val] of Object.entries(m.metrics)) {
+      const formatted = formatMetric(key, val);
+      html += `<tr><td class="metric-name">${key}</td><td class="${formatted.cls}">${formatted.text}</td></tr>`;
+    }
+
+    html += `</table>`;
+
+    // Confusion matrix if present
+    if (m.cm) {
+      html += `
+        <div style="margin-top:0.75rem;font-size:0.75rem;color:var(--gray-500);font-weight:600;">CONFUSION MATRIX</div>
+        <div class="confusion-matrix">
+          <div class="cm-cell cm-corner"></div>
+          <div class="cm-cell cm-header">Pred +</div>
+          <div class="cm-cell cm-header">Pred &minus;</div>
+          <div class="cm-cell cm-header">Act +</div>
+          <div class="cm-cell cm-tp">TP: ${m.cm.tp}</div>
+          <div class="cm-cell cm-fn">FN: ${m.cm.fn}</div>
+          <div class="cm-cell cm-header">Act &minus;</div>
+          <div class="cm-cell cm-fp">FP: ${m.cm.fp}</div>
+          <div class="cm-cell cm-tn">TN: ${m.cm.tn}</div>
+        </div>
+      `;
+    }
+
+    html += `</div>`;
+  });
+
+  html += `</div></div>`;
+  document.getElementById('scenarioContainer').innerHTML = html;
+}
+
+function formatMetric(name, val) {
+  const n = name.toLowerCase();
+
+  // R² and accuracy-type metrics (0-1, higher is better)
+  if (n.includes('r²') || n.includes('accuracy') || n.includes('precision') || n.includes('recall') || n.includes('f1')) {
+    const text = typeof val === 'number' && val <= 1.0 && val >= 0 ? (val * 100).toFixed(1) + '%' : val.toFixed ? val.toFixed(2) : val;
+    let cls = '';
+    if (typeof val === 'number') {
+      if (n.includes('r²')) {
+        cls = val >= 0.8 ? 'val-good' : val >= 0.5 ? 'val-ok' : 'val-bad';
+      } else {
+        cls = val >= 0.85 ? 'val-good' : val >= 0.7 ? 'val-ok' : 'val-bad';
+      }
+    }
+    return { text, cls };
+  }
+
+  // Error metrics (lower is better)
+  if (n.includes('mse') || n.includes('rmse') || n.includes('mae') || n.includes('error')) {
+    const text = typeof val === 'number' ? val.toLocaleString(undefined, { maximumFractionDigits: 2 }) : val;
+    return { text, cls: '' };
+  }
+
+  return { text: typeof val === 'number' ? val.toFixed(2) : val, cls: '' };
+}
+
+function selectModel(i) {
+  if (answered) return;
+  selectedModel = i;
+
+  document.querySelectorAll('.model-card').forEach((c, j) => {
+    c.classList.toggle('selected', j === i);
+  });
+
+  document.getElementById('confirmBtn').disabled = false;
+}
+
+function confirmChoice() {
+  if (selectedModel < 0 || answered) return;
+  answered = true;
+
+  const s = scenarios[currentRound];
+  const isCorrect = selectedModel === s.correct;
+
+  if (isCorrect) {
+    score += s.difficulty === 'hard' ? 30 : s.difficulty === 'medium' ? 20 : 10;
+    if (streak > 0) score += streak * 5; // streak bonus
+    streak++;
+    maxStreak = Math.max(maxStreak, streak);
+  } else {
+    streak = 0;
+  }
+
+  results.push({
+    title: s.title,
+    correct: isCorrect,
+    chose: s.models[selectedModel].name,
+    answer: s.models[s.correct].name,
+    explanation: s.explanation
+  });
+
+  document.getElementById('scoreDisplay').textContent = score;
+  document.getElementById('streakDisplay').textContent = streak;
+
+  // Highlight cards
+  document.querySelectorAll('.model-card').forEach((c, j) => {
+    c.classList.add('disabled');
+    c.classList.remove('selected');
+    if (j === s.correct) c.classList.add('correct');
+    else if (j === selectedModel && !isCorrect) c.classList.add('wrong');
+  });
+
+  // Feedback
+  const fb = document.getElementById('feedbackBox');
+  fb.classList.add('show', isCorrect ? 'correct-fb' : 'wrong-fb');
+  document.getElementById('feedbackTitle').textContent = isCorrect ? 'Correct!' + (streak > 1 ? ` (${streak} streak bonus!)` : '') : 'Not quite!';
+  document.getElementById('feedbackText').innerHTML = s.explanation;
+
+  // Change button
+  const btn = document.getElementById('confirmBtn');
+  if (currentRound < scenarios.length - 1) {
+    btn.textContent = 'Next Round →';
+    btn.className = 'btn btn-success btn-lg';
+    btn.disabled = false;
+    btn.onclick = () => { currentRound++; loadRound(); };
+  } else {
+    btn.textContent = 'See Results →';
+    btn.className = 'btn btn-success btn-lg';
+    btn.disabled = false;
+    btn.onclick = showResults;
+  }
+}
+
+function showResults() {
+  document.getElementById('gameScreen').classList.remove('active');
+  document.getElementById('resultsScreen').classList.add('active');
+  document.getElementById('headerStats').style.display = 'none';
+
+  const total = scenarios.length;
+  const correctCount = results.filter(r => r.correct).length;
+  const pct = Math.round((correctCount / total) * 100);
+
+  let grade, cls, title, subtitle;
+  if (pct >= 80) { grade = 'great'; title = 'Excellent!'; subtitle = 'You have a strong grasp of model evaluation metrics.'; }
+  else if (pct >= 50) { grade = 'ok'; title = 'Good effort!'; subtitle = 'Review the explanations below to strengthen your understanding.'; }
+  else { grade = 'poor'; title = 'Keep practicing!'; subtitle = 'Metrics interpretation is tricky — review the scenarios and try again.'; }
+
+  document.getElementById('resultsTitle').textContent = title;
+  document.getElementById('resultsSubtitle').textContent = subtitle;
+
+  document.getElementById('scoreCircle').innerHTML = `
+    <div class="score-circle ${grade}">
+      <div class="big">${correctCount}/${total}</div>
+      <div class="small">${score} points</div>
+    </div>
+  `;
+
+  let reviewHtml = '<h3 style="margin-bottom:1rem;">Round Review</h3>';
+  results.forEach((r, i) => {
+    reviewHtml += `
+      <div class="review-card ${r.correct ? 'was-correct' : 'was-wrong'}">
+        <div class="review-q">${i + 1}. ${r.title} — ${r.correct ? 'Correct' : `Wrong (you chose ${r.chose}, answer: ${r.answer})`}</div>
+        <div class="review-a">${r.explanation}</div>
+      </div>
+    `;
+  });
+  document.getElementById('reviewList').innerHTML = reviewHtml;
+}
+
+// ==================== Reference Panel ====================
+function toggleReference() {
+  const p = document.getElementById('referencePanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+
+function switchRef(btn, id) {
+  document.querySelectorAll('.ref-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.ref-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('ref-' + id).classList.add('active');
+}
+</script>
+</body>
+</html>

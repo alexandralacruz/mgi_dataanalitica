@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Regularization Demo</title>
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-light: #818cf8;
+    --primary-lighter: #c7d2fe;
+    --primary-lightest: #eef2ff;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--gray-50);
+    color: var(--gray-900);
+    line-height: 1.6;
+  }
+
+  header {
+    background: linear-gradient(135deg, var(--primary), #7c3aed);
+    color: white;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  header h1 { font-size: 2rem; font-weight: 700; }
+  header p { opacity: 0.9; margin-top: 0.5rem; font-size: 1.1rem; }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--gray-200);
+    padding-bottom: 0;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--gray-500);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+  }
+
+  .tab:hover { color: var(--primary); }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .card h2 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    color: var(--primary);
+  }
+
+  .card h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    color: var(--gray-700);
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  canvas {
+    width: 100%;
+    height: 350px;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    background: white;
+  }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .control-group label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--gray-700);
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    accent-color: var(--primary);
+    height: 6px;
+  }
+
+  .slider-value {
+    min-width: 60px;
+    text-align: right;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    color: var(--primary);
+  }
+
+  .formula-box {
+    background: var(--primary-lightest);
+    border: 1px solid var(--primary-lighter);
+    border-radius: 8px;
+    padding: 1rem;
+    font-family: 'Courier New', monospace;
+    text-align: center;
+    margin: 0.75rem 0;
+    font-size: 0.95rem;
+    line-height: 1.8;
+    overflow-x: auto;
+  }
+
+  .info-box {
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 0.75rem 0;
+    font-size: 0.9rem;
+  }
+
+  .info-box.tip {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+  }
+
+  .info-box.warning {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+  }
+
+  .info-box.info {
+    background: var(--primary-lightest);
+    border: 1px solid var(--primary-lighter);
+    color: #3730a3;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-right: 0.25rem;
+  }
+
+  .badge.underfit { background: #dbeafe; color: #1e40af; }
+  .badge.goodfit { background: #dcfce7; color: #166534; }
+  .badge.overfit { background: #fee2e2; color: #991b1b; }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  .metric-card {
+    background: var(--gray-50);
+    border-radius: 8px;
+    padding: 0.75rem;
+    text-align: center;
+  }
+
+  .metric-card .label {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .metric-card .value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--primary);
+    font-family: 'Courier New', monospace;
+  }
+
+  .legend {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  .weight-bars {
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
+    height: 120px;
+    margin-top: 0.5rem;
+    padding: 0 0.5rem;
+  }
+
+  .weight-bar-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .weight-bar {
+    width: 100%;
+    max-width: 30px;
+    border-radius: 3px 3px 0 0;
+    transition: height 0.3s;
+    min-height: 2px;
+  }
+
+  .weight-label {
+    font-size: 0.65rem;
+    color: var(--gray-500);
+    margin-top: 2px;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+
+  .btn-primary:hover { background: #4338ca; }
+
+  .btn-outline {
+    background: white;
+    border: 1.5px solid var(--primary);
+    color: var(--primary);
+  }
+
+  .btn-outline:hover { background: var(--primary-lightest); }
+
+  .btn-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .step-indicator {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .step {
+    flex: 1;
+    padding: 0.5rem;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: var(--gray-100);
+    color: var(--gray-500);
+  }
+
+  .step.active {
+    background: var(--primary);
+    color: white;
+  }
+
+  .step.completed {
+    background: var(--success);
+    color: white;
+  }
+
+  ul, ol { padding-left: 1.25rem; }
+  li { margin-bottom: 0.3rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Regularization: What It Is & How It Works</h1>
+  <p>CSDS-352 — Data Science and Machine Learning — Interactive Demo</p>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" data-tab="concept">1. The Problem</button>
+    <button class="tab" data-tab="playground">2. Interactive Playground</button>
+    <button class="tab" data-tab="types">3. L1 vs L2</button>
+    <button class="tab" data-tab="weights">4. Effect on Weights</button>
+    <button class="tab" data-tab="quiz">5. Test Yourself</button>
+  </div>
+
+  <!-- TAB 1: Concept -->
+  <div id="concept" class="tab-content active">
+    <div class="card">
+      <h2>Why Do We Need Regularization?</h2>
+      <p>When training a model, we want it to <strong>generalize</strong> — perform well on <em>new, unseen data</em>, not just memorize the training set. Without regularization, models with enough capacity will <strong>overfit</strong>: they fit the noise in the data rather than the underlying pattern.</p>
+
+      <div class="grid-2" style="margin-top:1.5rem;">
+        <div>
+          <h3>Overfitting vs. Underfitting</h3>
+          <p>Move the <strong>polynomial degree</strong> slider to see how model complexity affects fit:</p>
+          <canvas id="conceptCanvas"></canvas>
+          <div class="controls">
+            <div class="control-group">
+              <label>Polynomial Degree</label>
+              <div class="slider-row">
+                <input type="range" id="conceptDegree" min="1" max="12" value="1" step="1">
+                <span class="slider-value" id="conceptDegreeVal">1</span>
+              </div>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-outline" onclick="setConceptDegree(1)"><span class="badge underfit">Underfit</span> Degree 1</button>
+              <button class="btn btn-outline" onclick="setConceptDegree(3)"><span class="badge goodfit">Good Fit</span> Degree 3</button>
+              <button class="btn btn-outline" onclick="setConceptDegree(12)"><span class="badge overfit">Overfit</span> Degree 12</button>
+            </div>
+          </div>
+          <div class="metrics-grid" id="conceptMetrics"></div>
+        </div>
+        <div>
+          <h3>What is happening?</h3>
+          <div class="info-box info">
+            <strong>Key insight:</strong> As degree increases, the model fits training data better (lower training error) but eventually fits the <em>noise</em>, causing test error to rise.
+          </div>
+
+          <h3 style="margin-top:1rem;">The Bias-Variance Tradeoff</h3>
+          <ul>
+            <li><strong>High bias (underfitting):</strong> Model too simple, can't capture the pattern</li>
+            <li><strong>High variance (overfitting):</strong> Model too complex, captures noise</li>
+            <li><strong>Sweet spot:</strong> Enough complexity to capture the pattern, not enough to fit noise</li>
+          </ul>
+
+          <h3 style="margin-top:1rem;">The Regularization Solution</h3>
+          <p>Regularization adds a <strong>penalty term</strong> to the cost function that discourages the model from becoming too complex — it "regularizes" (constrains) the weights.</p>
+
+          <div class="formula-box">
+            J(w, b) = <span style="color:#ef4444">1/(2m) Σ (ŷ - y)²</span> + <span style="color:#4f46e5">λ/(2m) Σ wⱼ²</span><br>
+            <small style="color:var(--gray-500)"><span style="color:#ef4444">■</span> data loss &nbsp; <span style="color:#4f46e5">■</span> regularization penalty</small>
+          </div>
+
+          <div class="info-box tip">
+            <strong>λ (lambda)</strong> controls the strength of regularization:<br>
+            • λ = 0 → no regularization (risk of overfitting)<br>
+            • λ too large → underfitting (weights shrink to ~0)<br>
+            • λ just right → good generalization
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: Playground -->
+  <div id="playground" class="tab-content">
+    <div class="card">
+      <h2>Regularization Playground</h2>
+      <p>Adjust <strong>λ</strong> and the polynomial degree to see how regularization tames overfitting in real time.</p>
+
+      <div class="grid-2" style="margin-top:1rem;">
+        <div>
+          <h3>Model Fit</h3>
+          <canvas id="playCanvas"></canvas>
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div> Training data</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> No regularization</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#4f46e5"></div> With regularization</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#22c55e;border:2px dashed #22c55e;background:transparent"></div> True function</div>
+          </div>
+        </div>
+        <div>
+          <h3>Controls</h3>
+          <div class="controls">
+            <div class="control-group">
+              <label>Polynomial Degree</label>
+              <div class="slider-row">
+                <input type="range" id="playDegree" min="1" max="15" value="10" step="1">
+                <span class="slider-value" id="playDegreeVal">10</span>
+              </div>
+            </div>
+            <div class="control-group">
+              <label>λ (Regularization Strength)</label>
+              <div class="slider-row">
+                <input type="range" id="playLambda" min="-4" max="4" value="0" step="0.1">
+                <span class="slider-value" id="playLambdaVal">1.00</span>
+              </div>
+            </div>
+            <div class="control-group">
+              <label>Noise Level</label>
+              <div class="slider-row">
+                <input type="range" id="playNoise" min="0" max="2" value="0.5" step="0.1">
+                <span class="slider-value" id="playNoiseVal">0.5</span>
+              </div>
+            </div>
+            <div class="control-group">
+              <label>Number of Data Points</label>
+              <div class="slider-row">
+                <input type="range" id="playPoints" min="8" max="40" value="15" step="1">
+                <span class="slider-value" id="playPointsVal">15</span>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="regeneratePlayground()">Generate New Data</button>
+          </div>
+
+          <div class="metrics-grid" id="playMetrics"></div>
+
+          <div class="info-box warning" id="playStatus" style="margin-top:0.75rem;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: L1 vs L2 -->
+  <div id="types" class="tab-content">
+    <div class="card">
+      <h2>L1 (Lasso) vs L2 (Ridge) Regularization</h2>
+      <div class="grid-2" style="margin-top:1rem;">
+        <div>
+          <h3>Constraint Regions</h3>
+          <canvas id="constraintCanvas"></canvas>
+          <div class="controls">
+            <div class="control-group">
+              <label>λ (Regularization Strength)</label>
+              <div class="slider-row">
+                <input type="range" id="constraintLambda" min="0.2" max="3" value="1" step="0.1">
+                <span class="slider-value" id="constraintLambdaVal">1.0</span>
+              </div>
+            </div>
+          </div>
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#4f46e5"></div> L2 (Ridge) — circle</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> L1 (Lasso) — diamond</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Cost contours</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Optimal point</div>
+          </div>
+        </div>
+        <div>
+          <h3>Key Differences</h3>
+
+          <div class="formula-box">
+            <strong>L2 (Ridge):</strong> J + λ Σ wⱼ²<br>
+            <strong>L1 (Lasso):</strong> J + λ Σ |wⱼ|
+          </div>
+
+          <table style="width:100%; border-collapse:collapse; margin:1rem 0; font-size:0.9rem;">
+            <tr style="background:var(--primary-lightest);">
+              <th style="padding:0.5rem; text-align:left; border-bottom:2px solid var(--primary-lighter);"></th>
+              <th style="padding:0.5rem; text-align:center; border-bottom:2px solid var(--primary-lighter);">L2 (Ridge)</th>
+              <th style="padding:0.5rem; text-align:center; border-bottom:2px solid var(--primary-lighter);">L1 (Lasso)</th>
+            </tr>
+            <tr><td style="padding:0.5rem;border-bottom:1px solid var(--gray-200)">Penalty</td><td style="padding:0.5rem;text-align:center;border-bottom:1px solid var(--gray-200)">Sum of squares</td><td style="padding:0.5rem;text-align:center;border-bottom:1px solid var(--gray-200)">Sum of absolutes</td></tr>
+            <tr><td style="padding:0.5rem;border-bottom:1px solid var(--gray-200)">Constraint shape</td><td style="padding:0.5rem;text-align:center;border-bottom:1px solid var(--gray-200)">Circle</td><td style="padding:0.5rem;text-align:center;border-bottom:1px solid var(--gray-200)">Diamond</td></tr>
+            <tr><td style="padding:0.5rem;border-bottom:1px solid var(--gray-200)">Effect on weights</td><td style="padding:0.5rem;text-align:center;border-bottom:1px solid var(--gray-200)">Shrinks all</td><td style="padding:0.5rem;text-align:center;border-bottom:1px solid var(--gray-200)">Shrinks some to <strong>zero</strong></td></tr>
+            <tr><td style="padding:0.5rem;border-bottom:1px solid var(--gray-200)">Feature selection?</td><td style="padding:0.5rem;text-align:center;border-bottom:1px solid var(--gray-200)">No</td><td style="padding:0.5rem;text-align:center;border-bottom:1px solid var(--gray-200)"><strong>Yes</strong></td></tr>
+            <tr><td style="padding:0.5rem;">Best when</td><td style="padding:0.5rem;text-align:center;">All features matter</td><td style="padding:0.5rem;text-align:center;">Few features matter</td></tr>
+          </table>
+
+          <div class="info-box info">
+            <strong>Why does L1 produce zeros?</strong> The diamond shape of L1's constraint region has corners that sit on the axes. The cost function contours are more likely to first touch these corners — setting one weight exactly to zero. This effectively removes that feature!
+          </div>
+
+          <div class="info-box tip">
+            <strong>Elastic Net</strong> combines both: λ₁ Σ|wⱼ| + λ₂ Σwⱼ² — giving you feature selection <em>and</em> smooth shrinkage.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: Effect on Weights -->
+  <div id="weights" class="tab-content">
+    <div class="card">
+      <h2>How Regularization Affects Weights</h2>
+      <p>Watch how increasing λ shrinks the model's weights. Smaller weights = simpler model = better generalization.</p>
+
+      <div class="grid-2" style="margin-top:1rem;">
+        <div>
+          <h3>Weight Magnitudes (L2 / Ridge)</h3>
+          <div class="weight-bars" id="l2Bars"></div>
+          <h3 style="margin-top:1.5rem;">Weight Magnitudes (L1 / Lasso)</h3>
+          <div class="weight-bars" id="l1Bars"></div>
+        </div>
+        <div>
+          <h3>Controls</h3>
+          <div class="controls">
+            <div class="control-group">
+              <label>λ (Regularization Strength)</label>
+              <div class="slider-row">
+                <input type="range" id="weightLambda" min="-3" max="5" value="0" step="0.1">
+                <span class="slider-value" id="weightLambdaVal">1.00</span>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="margin-top:1rem;">Weight Path (as λ increases)</h3>
+          <canvas id="weightPathCanvas" style="height:250px;"></canvas>
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#4f46e5"></div> L2 paths</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> L1 paths</div>
+            <div class="legend-item" style="font-size:0.8rem;color:var(--gray-500);">← current λ shown as vertical line</div>
+          </div>
+
+          <div class="info-box info" style="margin-top:1rem;">
+            <strong>Observe:</strong> L2 weights shrink smoothly toward zero but never quite reach it. L1 weights hit zero at different λ values — this is <strong>automatic feature selection</strong>.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 5: Quiz -->
+  <div id="quiz" class="tab-content">
+    <div class="card">
+      <h2>Test Your Understanding</h2>
+      <div id="quizContainer"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== Utility Functions ====================
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+let globalSeed = 42;
+let rng = mulberry32(globalSeed);
+
+function gaussianRandom() {
+  let u = 0, v = 0;
+  while (u === 0) u = rng();
+  while (v === 0) v = rng();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+function trueFunction(x) {
+  return 0.5 * Math.sin(2.5 * x) + 0.3 * x;
+}
+
+function generateData(n, noise) {
+  const xs = [], ys = [];
+  for (let i = 0; i < n; i++) {
+    const x = -1 + 2 * i / (n - 1) + (rng() - 0.5) * 0.1;
+    const y = trueFunction(x) + gaussianRandom() * noise;
+    xs.push(x);
+    ys.push(y);
+  }
+  return { xs, ys };
+}
+
+// Polynomial features: [1, x, x², ..., x^d]
+function polyFeatures(x, degree) {
+  const f = [];
+  for (let d = 0; d <= degree; d++) f.push(Math.pow(x, d));
+  return f;
+}
+
+// Build design matrix
+function designMatrix(xs, degree) {
+  return xs.map(x => polyFeatures(x, degree));
+}
+
+// Regularized least squares: w = (X'X + λI)^(-1) X'y
+// Using normal equation with regularization
+function fitPolynomial(xs, ys, degree, lambda) {
+  const n = xs.length;
+  const d = degree + 1;
+  const X = designMatrix(xs, degree);
+
+  // X'X
+  const XtX = Array.from({ length: d }, () => new Float64Array(d));
+  for (let i = 0; i < d; i++) {
+    for (let j = 0; j < d; j++) {
+      let s = 0;
+      for (let k = 0; k < n; k++) s += X[k][i] * X[k][j];
+      XtX[i][j] = s;
+    }
+  }
+
+  // Add regularization (don't regularize bias term)
+  for (let i = 1; i < d; i++) XtX[i][i] += lambda;
+
+  // X'y
+  const Xty = new Float64Array(d);
+  for (let i = 0; i < d; i++) {
+    let s = 0;
+    for (let k = 0; k < n; k++) s += X[k][i] * ys[k];
+    Xty[i] = s;
+  }
+
+  // Solve via Gauss elimination
+  const A = XtX.map((row, i) => [...row, Xty[i]]);
+  for (let col = 0; col < d; col++) {
+    let maxRow = col;
+    for (let row = col + 1; row < d; row++) {
+      if (Math.abs(A[row][col]) > Math.abs(A[maxRow][col])) maxRow = row;
+    }
+    [A[col], A[maxRow]] = [A[maxRow], A[col]];
+    if (Math.abs(A[col][col]) < 1e-12) continue;
+    for (let row = col + 1; row < d; row++) {
+      const f = A[row][col] / A[col][col];
+      for (let j = col; j <= d; j++) A[row][j] -= f * A[col][j];
+    }
+  }
+
+  const w = new Float64Array(d);
+  for (let i = d - 1; i >= 0; i--) {
+    let s = A[i][d];
+    for (let j = i + 1; j < d; j++) s -= A[i][j] * w[j];
+    w[i] = Math.abs(A[i][i]) > 1e-12 ? s / A[i][i] : 0;
+  }
+
+  return w;
+}
+
+function predict(w, x) {
+  let y = 0;
+  for (let i = 0; i < w.length; i++) y += w[i] * Math.pow(x, i);
+  return y;
+}
+
+function mse(xs, ys, w) {
+  let s = 0;
+  for (let i = 0; i < xs.length; i++) {
+    const e = predict(w, xs[i]) - ys[i];
+    s += e * e;
+  }
+  return s / xs.length;
+}
+
+function r2Score(xs, ys, w) {
+  let ssRes = 0, ssTot = 0;
+  let mean = ys.reduce((a, b) => a + b, 0) / ys.length;
+  for (let i = 0; i < xs.length; i++) {
+    const e = predict(w, xs[i]) - ys[i];
+    ssRes += e * e;
+    ssTot += (ys[i] - mean) * (ys[i] - mean);
+  }
+  return ssTot === 0 ? 0 : 1 - ssRes / ssTot;
+}
+
+// ==================== Canvas Drawing ====================
+function setupCanvas(canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, w: rect.width, h: rect.height };
+}
+
+function drawAxes(ctx, w, h, margin, xRange, yRange) {
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 1;
+
+  const pw = w - 2 * margin;
+  const ph = h - 2 * margin;
+
+  // Grid
+  for (let i = 0; i <= 5; i++) {
+    const x = margin + (i / 5) * pw;
+    ctx.beginPath(); ctx.moveTo(x, margin); ctx.lineTo(x, h - margin); ctx.stroke();
+    const y = margin + (i / 5) * ph;
+    ctx.beginPath(); ctx.moveTo(margin, y); ctx.lineTo(w - margin, y); ctx.stroke();
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#9ca3af';
+  ctx.font = '11px system-ui';
+  ctx.textAlign = 'center';
+  for (let i = 0; i <= 5; i++) {
+    const x = margin + (i / 5) * pw;
+    const val = xRange[0] + (i / 5) * (xRange[1] - xRange[0]);
+    ctx.fillText(val.toFixed(1), x, h - margin + 15);
+  }
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 5; i++) {
+    const y = margin + (i / 5) * ph;
+    const val = yRange[1] - (i / 5) * (yRange[1] - yRange[0]);
+    ctx.fillText(val.toFixed(1), margin - 5, y + 4);
+  }
+}
+
+function toPixel(x, y, w, h, margin, xRange, yRange) {
+  const px = margin + (x - xRange[0]) / (xRange[1] - xRange[0]) * (w - 2 * margin);
+  const py = margin + (yRange[1] - y) / (yRange[1] - yRange[0]) * (h - 2 * margin);
+  return [px, py];
+}
+
+function drawPoints(ctx, xs, ys, w, h, margin, xRange, yRange, color = '#94a3b8', size = 4) {
+  ctx.fillStyle = color;
+  for (let i = 0; i < xs.length; i++) {
+    const [px, py] = toPixel(xs[i], ys[i], w, h, margin, xRange, yRange);
+    ctx.beginPath();
+    ctx.arc(px, py, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawCurve(ctx, w_coeff, canvasW, canvasH, margin, xRange, yRange, color, lineWidth = 2, dash = []) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.setLineDash(dash);
+  ctx.beginPath();
+  const steps = 200;
+  let started = false;
+  for (let i = 0; i <= steps; i++) {
+    const x = xRange[0] + (i / steps) * (xRange[1] - xRange[0]);
+    let y;
+    if (typeof w_coeff === 'function') {
+      y = w_coeff(x);
+    } else {
+      y = predict(w_coeff, x);
+    }
+    y = Math.max(yRange[0] - 1, Math.min(yRange[1] + 1, y));
+    const [px, py] = toPixel(x, y, canvasW, canvasH, margin, xRange, yRange);
+    if (!started) { ctx.moveTo(px, py); started = true; }
+    else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ==================== Tab 1: Concept ====================
+let conceptData;
+function initConcept() {
+  rng = mulberry32(42);
+  conceptData = generateData(20, 0.3);
+  updateConcept();
+}
+
+function setConceptDegree(d) {
+  document.getElementById('conceptDegree').value = d;
+  document.getElementById('conceptDegreeVal').textContent = d;
+  updateConcept();
+}
+
+function updateConcept() {
+  const degree = parseInt(document.getElementById('conceptDegree').value);
+  document.getElementById('conceptDegreeVal').textContent = degree;
+
+  const canvas = document.getElementById('conceptCanvas');
+  const { ctx, w, h } = setupCanvas(canvas);
+  const margin = 45;
+  const xRange = [-1.3, 1.3];
+  const yRange = [-1.5, 1.5];
+
+  ctx.clearRect(0, 0, w, h);
+  drawAxes(ctx, w, h, margin, xRange, yRange);
+
+  // True function
+  drawCurve(ctx, trueFunction, w, h, margin, xRange, yRange, '#22c55e', 2, [6, 4]);
+
+  // Fit
+  const weights = fitPolynomial(conceptData.xs, conceptData.ys, degree, 0);
+  drawCurve(ctx, weights, w, h, margin, xRange, yRange, '#ef4444', 2.5);
+
+  // Points
+  drawPoints(ctx, conceptData.xs, conceptData.ys, w, h, margin, xRange, yRange);
+
+  // Metrics
+  const trainMSE = mse(conceptData.xs, conceptData.ys, weights);
+  rng = mulberry32(999);
+  const testData = generateData(30, 0.3);
+  const testMSE = mse(testData.xs, testData.ys, weights);
+  const trainR2 = r2Score(conceptData.xs, conceptData.ys, weights);
+  const testR2 = r2Score(testData.xs, testData.ys, weights);
+
+  let status = '';
+  if (degree <= 2) status = '<span class="badge underfit">Underfitting</span>';
+  else if (degree <= 5) status = '<span class="badge goodfit">Good Fit</span>';
+  else status = '<span class="badge overfit">Overfitting</span>';
+
+  document.getElementById('conceptMetrics').innerHTML = `
+    <div class="metric-card"><div class="label">Train MSE</div><div class="value">${trainMSE.toFixed(3)}</div></div>
+    <div class="metric-card"><div class="label">Test MSE</div><div class="value">${testMSE.toFixed(3)}</div></div>
+    <div class="metric-card"><div class="label">Train R²</div><div class="value">${Math.min(trainR2, 1).toFixed(3)}</div></div>
+    <div class="metric-card"><div class="label">Test R²</div><div class="value">${testR2.toFixed(3)}</div></div>
+    <div class="metric-card" style="grid-column: span 2;"><div class="label">Status</div><div class="value">${status}</div></div>
+  `;
+}
+
+// ==================== Tab 2: Playground ====================
+let playData;
+function initPlayground() {
+  regeneratePlayground();
+}
+
+function regeneratePlayground() {
+  globalSeed = Math.floor(Math.random() * 100000);
+  rng = mulberry32(globalSeed);
+  const n = parseInt(document.getElementById('playPoints').value);
+  const noise = parseFloat(document.getElementById('playNoise').value);
+  playData = generateData(n, noise);
+  updatePlayground();
+}
+
+function updatePlayground() {
+  const degree = parseInt(document.getElementById('playDegree').value);
+  const lambdaExp = parseFloat(document.getElementById('playLambda').value);
+  const lambda = Math.pow(10, lambdaExp);
+  const noise = parseFloat(document.getElementById('playNoise').value);
+
+  document.getElementById('playDegreeVal').textContent = degree;
+  document.getElementById('playLambdaVal').textContent = lambda.toFixed(lambda < 1 ? 4 : 2);
+  document.getElementById('playNoiseVal').textContent = noise.toFixed(1);
+  document.getElementById('playPointsVal').textContent = document.getElementById('playPoints').value;
+
+  const canvas = document.getElementById('playCanvas');
+  const { ctx, w, h } = setupCanvas(canvas);
+  const margin = 45;
+  const xRange = [-1.3, 1.3];
+  const yRange = [-2, 2];
+
+  ctx.clearRect(0, 0, w, h);
+  drawAxes(ctx, w, h, margin, xRange, yRange);
+
+  // True function
+  drawCurve(ctx, trueFunction, w, h, margin, xRange, yRange, '#22c55e', 2, [6, 4]);
+
+  // Unregularized
+  const wNoReg = fitPolynomial(playData.xs, playData.ys, degree, 0);
+  drawCurve(ctx, wNoReg, w, h, margin, xRange, yRange, '#ef444480', 1.5);
+
+  // Regularized
+  const wReg = fitPolynomial(playData.xs, playData.ys, degree, lambda);
+  drawCurve(ctx, wReg, w, h, margin, xRange, yRange, '#4f46e5', 2.5);
+
+  // Points
+  drawPoints(ctx, playData.xs, playData.ys, w, h, margin, xRange, yRange);
+
+  // Metrics
+  rng = mulberry32(globalSeed + 7777);
+  const testData = generateData(50, noise);
+
+  const trainMSE_noreg = mse(playData.xs, playData.ys, wNoReg);
+  const testMSE_noreg = mse(testData.xs, testData.ys, wNoReg);
+  const trainMSE_reg = mse(playData.xs, playData.ys, wReg);
+  const testMSE_reg = mse(testData.xs, testData.ys, wReg);
+
+  document.getElementById('playMetrics').innerHTML = `
+    <div class="metric-card"><div class="label">Train MSE (no reg)</div><div class="value" style="color:#ef4444">${trainMSE_noreg.toFixed(3)}</div></div>
+    <div class="metric-card"><div class="label">Test MSE (no reg)</div><div class="value" style="color:#ef4444">${Math.min(testMSE_noreg, 999).toFixed(3)}</div></div>
+    <div class="metric-card"><div class="label">Train MSE (reg)</div><div class="value">${trainMSE_reg.toFixed(3)}</div></div>
+    <div class="metric-card"><div class="label">Test MSE (reg)</div><div class="value">${Math.min(testMSE_reg, 999).toFixed(3)}</div></div>
+  `;
+
+  // Status message
+  const improvement = testMSE_noreg - testMSE_reg;
+  let msg = '';
+  if (lambda < 0.001) {
+    msg = '<strong>Very low λ:</strong> Almost no regularization. The model behaves nearly identically to unregularized.';
+  } else if (lambda > 1000) {
+    msg = '<strong>Very high λ:</strong> Extreme regularization! Weights are shrunk so much the model underfits.';
+  } else if (improvement > 0.01) {
+    msg = `<strong>Regularization helps!</strong> Test MSE improved by ${improvement.toFixed(3)}. The blue curve (regularized) generalizes better.`;
+  } else if (improvement < -0.01) {
+    msg = `<strong>Too much regularization:</strong> Test MSE worsened by ${(-improvement).toFixed(3)}. Try reducing λ.`;
+  } else {
+    msg = '<strong>Similar performance:</strong> Regularization has minimal effect at this λ. Try higher degree or more noise to see a difference.';
+  }
+  document.getElementById('playStatus').innerHTML = msg;
+}
+
+// ==================== Tab 3: Constraint Regions ====================
+function updateConstraint() {
+  const lambda = parseFloat(document.getElementById('constraintLambda').value);
+  document.getElementById('constraintLambdaVal').textContent = lambda.toFixed(1);
+
+  const canvas = document.getElementById('constraintCanvas');
+  const { ctx, w, h } = setupCanvas(canvas);
+  const cx = w / 2, cy = h / 2;
+  const scale = Math.min(w, h) * 0.35;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Axes
+  ctx.strokeStyle = '#d1d5db';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(20, cy); ctx.lineTo(w - 20, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, 20); ctx.lineTo(cx, h - 20); ctx.stroke();
+  ctx.fillStyle = '#6b7280';
+  ctx.font = '13px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('w₁', w - 25, cy - 8);
+  ctx.fillText('w₂', cx + 15, 25);
+
+  // Optimal (unregularized)
+  const optW1 = 0.6, optW2 = 0.45;
+
+  // Cost contours (ellipses centered at optimal)
+  ctx.strokeStyle = '#22c55e40';
+  ctx.lineWidth = 1;
+  for (let r = 0.15; r < 1.5; r += 0.15) {
+    ctx.beginPath();
+    for (let a = 0; a <= Math.PI * 2 + 0.1; a += 0.05) {
+      const x = cx + (optW1 + r * 1.2 * Math.cos(a)) * scale;
+      const y = cy - (optW2 + r * 0.8 * Math.sin(a)) * scale;
+      if (a === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  const constraintSize = 1.0 / lambda;
+
+  // L2 constraint (circle)
+  ctx.strokeStyle = '#4f46e5';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(cx, cy, constraintSize * scale, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // L1 constraint (diamond)
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  const ds = constraintSize * scale;
+  ctx.moveTo(cx, cy - ds);
+  ctx.lineTo(cx + ds, cy);
+  ctx.lineTo(cx, cy + ds);
+  ctx.lineTo(cx - ds, cy);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Unregularized optimum
+  ctx.fillStyle = '#f59e0b';
+  ctx.beginPath();
+  ctx.arc(cx + optW1 * scale, cy - optW2 * scale, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#92400e';
+  ctx.font = '11px system-ui';
+  ctx.fillText('ŵ (no reg)', cx + optW1 * scale + 5, cy - optW2 * scale - 10);
+
+  // L2 solution (projection onto circle)
+  const dist = Math.sqrt(optW1 * optW1 + optW2 * optW2);
+  const l2R = Math.min(dist, constraintSize);
+  const l2W1 = optW1 / dist * l2R;
+  const l2W2 = optW2 / dist * l2R;
+  ctx.fillStyle = '#4f46e5';
+  ctx.beginPath();
+  ctx.arc(cx + l2W1 * scale, cy - l2W2 * scale, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // L1 solution (projection onto diamond — nearest corner or edge)
+  let l1W1, l1W2;
+  const sumAbs = Math.abs(optW1) + Math.abs(optW2);
+  if (sumAbs <= constraintSize) {
+    l1W1 = optW1; l1W2 = optW2;
+  } else {
+    // Project: prefer corner if angle is right
+    const angle = Math.atan2(Math.abs(optW2), Math.abs(optW1));
+    if (angle < 0.3) { l1W1 = constraintSize * Math.sign(optW1); l1W2 = 0; }
+    else if (angle > Math.PI / 2 - 0.3) { l1W1 = 0; l1W2 = constraintSize * Math.sign(optW2); }
+    else {
+      const s = constraintSize / sumAbs;
+      l1W1 = optW1 * s; l1W2 = optW2 * s;
+    }
+  }
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath();
+  ctx.arc(cx + l1W1 * scale, cy - l1W2 * scale, 5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ==================== Tab 4: Weights ====================
+function initWeights() {
+  updateWeights();
+}
+
+// Approximate L1 via soft-thresholding
+function softThreshold(w, lambda) {
+  return w.map(v => Math.sign(v) * Math.max(0, Math.abs(v) - lambda));
+}
+
+function updateWeights() {
+  const lambdaExp = parseFloat(document.getElementById('weightLambda').value);
+  const lambda = Math.pow(10, lambdaExp);
+  document.getElementById('weightLambdaVal').textContent = lambda.toFixed(lambda < 1 ? 4 : 2);
+
+  rng = mulberry32(42);
+  const data = generateData(20, 0.3);
+  const degree = 8;
+
+  // Base weights (unregularized)
+  const wBase = fitPolynomial(data.xs, data.ys, degree, 0);
+  const wL2 = fitPolynomial(data.xs, data.ys, degree, lambda);
+
+  // Approximate L1 weights
+  const wL1 = softThreshold(Array.from(wBase), lambda * 0.3);
+
+  const maxW = Math.max(...Array.from(wBase).map(Math.abs), 0.1);
+
+  // L2 bars
+  const l2Container = document.getElementById('l2Bars');
+  l2Container.innerHTML = '';
+  for (let i = 0; i <= degree; i++) {
+    const absVal = Math.abs(wL2[i]);
+    const pct = (absVal / maxW) * 100;
+    const div = document.createElement('div');
+    div.className = 'weight-bar-container';
+    div.innerHTML = `<div class="weight-bar" style="height:${Math.max(pct, 1)}%;background:${wL2[i] >= 0 ? '#4f46e5' : '#818cf8'};"></div><div class="weight-label">w${i}</div>`;
+    l2Container.appendChild(div);
+  }
+
+  // L1 bars
+  const l1Container = document.getElementById('l1Bars');
+  l1Container.innerHTML = '';
+  for (let i = 0; i <= degree; i++) {
+    const absVal = Math.abs(wL1[i]);
+    const pct = (absVal / maxW) * 100;
+    const div = document.createElement('div');
+    div.className = 'weight-bar-container';
+    div.innerHTML = `<div class="weight-bar" style="height:${Math.max(pct, 1)}%;background:${absVal < 0.001 ? '#d1d5db' : wL1[i] >= 0 ? '#ef4444' : '#fca5a5'};"></div><div class="weight-label">w${i}${absVal < 0.001 ? ' (0)' : ''}</div>`;
+    l1Container.appendChild(div);
+  }
+
+  // Weight path canvas
+  drawWeightPaths(data, degree, lambdaExp);
+}
+
+function drawWeightPaths(data, degree, currentLogLambda) {
+  const canvas = document.getElementById('weightPathCanvas');
+  const { ctx, w, h } = setupCanvas(canvas);
+  const margin = 40;
+
+  ctx.clearRect(0, 0, w, h);
+
+  const logLambdas = [];
+  for (let l = -3; l <= 5; l += 0.2) logLambdas.push(l);
+
+  // Compute weight paths
+  const l2Paths = Array.from({ length: degree + 1 }, () => []);
+  const l1Paths = Array.from({ length: degree + 1 }, () => []);
+
+  const wBase = fitPolynomial(data.xs, data.ys, degree, 0);
+
+  for (const ll of logLambdas) {
+    const lam = Math.pow(10, ll);
+    const wL2 = fitPolynomial(data.xs, data.ys, degree, lam);
+    const wL1 = softThreshold(Array.from(wBase), lam * 0.3);
+    for (let i = 0; i <= degree; i++) {
+      l2Paths[i].push(wL2[i]);
+      l1Paths[i].push(wL1[i]);
+    }
+  }
+
+  const allVals = l2Paths.flat().concat(l1Paths.flat());
+  const yMax = Math.min(Math.max(...allVals.map(Math.abs)), 5);
+  const xRange = [-3, 5];
+  const yRange = [-yMax, yMax];
+
+  drawAxes(ctx, w, h, margin, xRange, yRange);
+
+  // Axis labels
+  ctx.fillStyle = '#6b7280';
+  ctx.font = '11px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('log₁₀(λ)', w / 2, h - 3);
+  ctx.save();
+  ctx.translate(12, h / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Weight value', 0, 0);
+  ctx.restore();
+
+  // Draw L2 paths
+  const colors = ['#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#4338ca', '#3730a3', '#312e81', '#1e1b4b'];
+  for (let i = 0; i <= degree; i++) {
+    ctx.strokeStyle = colors[i % colors.length] + '80';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let j = 0; j < logLambdas.length; j++) {
+      const [px, py] = toPixel(logLambdas[j], l2Paths[i][j], w, h, margin, xRange, yRange);
+      if (j === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  // Draw L1 paths
+  const redColors = ['#ef4444', '#f87171', '#fca5a5', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d', '#450a0a', '#fecaca'];
+  for (let i = 0; i <= degree; i++) {
+    ctx.strokeStyle = redColors[i % redColors.length] + '60';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    for (let j = 0; j < logLambdas.length; j++) {
+      const [px, py] = toPixel(logLambdas[j], l1Paths[i][j], w, h, margin, xRange, yRange);
+      if (j === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Current lambda indicator
+  const [lx] = toPixel(currentLogLambda, 0, w, h, margin, xRange, yRange);
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(lx, margin);
+  ctx.lineTo(lx, h - margin);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ==================== Tab 5: Quiz ====================
+const quizQuestions = [
+  {
+    q: "What does regularization primarily help prevent?",
+    options: ["Underfitting", "Overfitting", "Slow training", "Data leakage"],
+    correct: 1,
+    explanation: "Regularization adds a penalty that discourages complex models, which primarily helps prevent overfitting — when the model memorizes noise in the training data."
+  },
+  {
+    q: "If λ = 0, the regularized cost function becomes:",
+    options: ["Always zero", "The standard (unregularized) cost function", "Undefined", "Maximum possible"],
+    correct: 1,
+    explanation: "When λ = 0, the regularization penalty term λ/(2m) Σwⱼ² vanishes, leaving just the original loss function."
+  },
+  {
+    q: "What happens when λ is very large?",
+    options: ["The model overfits", "All weights grow large", "Weights shrink toward zero, causing underfitting", "Training becomes faster"],
+    correct: 2,
+    explanation: "A very large λ heavily penalizes any non-zero weight, forcing most weights close to zero. This makes the model too simple (underfitting)."
+  },
+  {
+    q: "Which type of regularization can set weights exactly to zero?",
+    options: ["L2 (Ridge)", "L1 (Lasso)", "Both equally", "Neither"],
+    correct: 1,
+    explanation: "L1 (Lasso) regularization's diamond-shaped constraint region has corners on the axes, making it likely for the optimal solution to have some weights exactly zero — performing automatic feature selection."
+  },
+  {
+    q: "In the regularized cost function J(w,b) = (1/2m)Σ(ŷ-y)² + (λ/2m)Σwⱼ², why don't we regularize the bias term b?",
+    options: [
+      "Because b is always zero",
+      "Because b only shifts the output — it doesn't contribute to model complexity",
+      "Because it would make the math harder",
+      "We actually should regularize b too"
+    ],
+    correct: 1,
+    explanation: "The bias term b shifts the entire prediction up or down. It doesn't contribute to the model 'wiggling' or fitting noise — that's controlled by the weights wⱼ. So we only need to penalize the weights."
+  },
+  {
+    q: "You train a degree-10 polynomial. Train R² = 0.99, Test R² = 0.35. What should you try?",
+    options: [
+      "Increase the polynomial degree",
+      "Remove regularization",
+      "Add regularization (increase λ)",
+      "Collect less training data"
+    ],
+    correct: 2,
+    explanation: "The large gap between train and test R² is a clear sign of overfitting. Increasing λ will constrain the weights and reduce overfitting, improving test performance."
+  }
+];
+
+function initQuiz() {
+  const container = document.getElementById('quizContainer');
+  container.innerHTML = quizQuestions.map((q, i) => `
+    <div class="card" style="margin-bottom:1rem;" id="q${i}">
+      <h3>Question ${i + 1}</h3>
+      <p style="margin-bottom:0.75rem;font-weight:500;">${q.q}</p>
+      <div style="display:flex;flex-direction:column;gap:0.4rem;">
+        ${q.options.map((opt, j) => `
+          <button class="btn btn-outline quiz-option" data-q="${i}" data-opt="${j}" onclick="checkAnswer(${i},${j})" style="text-align:left;justify-content:flex-start;">
+            ${String.fromCharCode(65 + j)}) ${opt}
+          </button>
+        `).join('')}
+      </div>
+      <div id="feedback${i}" style="margin-top:0.75rem;display:none;"></div>
+    </div>
+  `).join('');
+}
+
+function checkAnswer(qi, oi) {
+  const q = quizQuestions[qi];
+  const buttons = document.querySelectorAll(`[data-q="${qi}"]`);
+  buttons.forEach(btn => {
+    btn.disabled = true;
+    const opt = parseInt(btn.dataset.opt);
+    if (opt === q.correct) {
+      btn.style.background = '#dcfce7';
+      btn.style.borderColor = '#22c55e';
+      btn.style.color = '#166534';
+    } else if (opt === oi && oi !== q.correct) {
+      btn.style.background = '#fee2e2';
+      btn.style.borderColor = '#ef4444';
+      btn.style.color = '#991b1b';
+    }
+  });
+
+  const fb = document.getElementById(`feedback${qi}`);
+  fb.style.display = 'block';
+  if (oi === q.correct) {
+    fb.innerHTML = `<div class="info-box tip"><strong>Correct!</strong> ${q.explanation}</div>`;
+  } else {
+    fb.innerHTML = `<div class="info-box warning"><strong>Not quite.</strong> ${q.explanation}</div>`;
+  }
+}
+
+// ==================== Init & Events ====================
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+
+    // Lazy init canvases
+    if (tab.dataset.tab === 'playground') initPlayground();
+    if (tab.dataset.tab === 'types') updateConstraint();
+    if (tab.dataset.tab === 'weights') initWeights();
+    if (tab.dataset.tab === 'quiz') initQuiz();
+  });
+});
+
+// Slider listeners
+document.getElementById('conceptDegree').addEventListener('input', updateConcept);
+
+['playDegree', 'playLambda', 'playNoise', 'playPoints'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    if (id === 'playPoints' || id === 'playNoise') {
+      rng = mulberry32(globalSeed);
+      const n = parseInt(document.getElementById('playPoints').value);
+      const noise = parseFloat(document.getElementById('playNoise').value);
+      playData = generateData(n, noise);
+    }
+    updatePlayground();
+  });
+});
+
+document.getElementById('constraintLambda').addEventListener('input', updateConstraint);
+document.getElementById('weightLambda').addEventListener('input', updateWeights);
+
+// Handle resize
+window.addEventListener('resize', () => {
+  const activeTab = document.querySelector('.tab.active').dataset.tab;
+  if (activeTab === 'concept') updateConcept();
+  else if (activeTab === 'playground') updatePlayground();
+  else if (activeTab === 'types') updateConstraint();
+  else if (activeTab === 'weights') updateWeights();
+});
+
+// Start
+initConcept();
+</script>
+</body>
+</html>

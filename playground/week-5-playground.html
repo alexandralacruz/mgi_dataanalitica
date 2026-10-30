@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SVM Playground - Week 5</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Bebas+Neue&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #f5f0eb;
+    color: #1a1a1a;
+    font-family: 'Courier Prime', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* --- TRASH POLKA DECORATIVE ELEMENTS --- */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -120px; right: -80px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, #c41e3a 0%, transparent 70%);
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -100px; left: -60px;
+    width: 400px; height: 400px;
+    border: 3px solid #c41e3a;
+    border-radius: 50%;
+    opacity: 0.08;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative;
+    padding: 40px 40px 20px;
+    border-bottom: 4px solid #1a1a1a;
+    background: #1a1a1a;
+    color: #f5f0eb;
+    overflow: hidden;
+  }
+  header::after {
+    content: 'SVM';
+    position: absolute;
+    right: 30px; top: -20px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 180px;
+    color: #c41e3a;
+    opacity: 0.15;
+    line-height: 1;
+    pointer-events: none;
+  }
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 1;
+  }
+  header h1 span { color: #c41e3a; }
+  header p {
+    font-size: 14px;
+    opacity: 0.7;
+    margin-top: 4px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* --- TABS --- */
+  .tab-bar {
+    display: flex;
+    background: #1a1a1a;
+    border-bottom: 3px solid #c41e3a;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .tab-btn {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    padding: 14px 28px;
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+    text-transform: uppercase;
+  }
+  .tab-btn:hover { color: #f5f0eb; }
+  .tab-btn.active {
+    color: #f5f0eb;
+    background: #c41e3a;
+  }
+
+  /* --- CONTENT --- */
+  .tab-content { display: none; padding: 30px 40px 60px; position: relative; z-index: 1; }
+  .tab-content.active { display: block; }
+
+  h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    border-left: 5px solid #c41e3a;
+    padding-left: 16px;
+  }
+  h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    margin: 24px 0 8px;
+    text-transform: uppercase;
+    color: #c41e3a;
+  }
+  p, li { font-size: 15px; line-height: 1.7; margin-bottom: 8px; }
+  ul { padding-left: 20px; list-style: none; }
+  ul li::before { content: '//'; color: #c41e3a; font-weight: bold; margin-right: 8px; }
+  strong { color: #c41e3a; }
+
+  .note-box {
+    background: #1a1a1a;
+    color: #f5f0eb;
+    padding: 16px 20px;
+    margin: 16px 0;
+    border-left: 5px solid #c41e3a;
+    font-size: 14px;
+  }
+  .note-box strong { color: #c41e3a; }
+
+  .formula {
+    font-family: 'Courier Prime', monospace;
+    background: #1a1a1a;
+    color: #c41e3a;
+    padding: 10px 18px;
+    display: inline-block;
+    margin: 8px 0;
+    font-size: 16px;
+    letter-spacing: 1px;
+  }
+
+  /* --- CANVAS & CONTROLS --- */
+  .playground-area {
+    display: flex;
+    gap: 24px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .canvas-wrap {
+    background: #fff;
+    border: 3px solid #1a1a1a;
+    position: relative;
+    flex: 1;
+    min-width: 400px;
+  }
+  .canvas-wrap canvas {
+    display: block;
+    width: 100%;
+    cursor: crosshair;
+  }
+  .canvas-label {
+    position: absolute;
+    top: 8px; left: 10px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: #999;
+    text-transform: uppercase;
+  }
+
+  .controls {
+    min-width: 260px;
+    max-width: 320px;
+  }
+  .control-group {
+    margin-bottom: 16px;
+  }
+  .control-group label {
+    display: block;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    color: #1a1a1a;
+  }
+  .control-group .val {
+    font-size: 13px;
+    color: #c41e3a;
+    font-weight: bold;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    background: #1a1a1a;
+    outline: none;
+    border-radius: 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    background: #c41e3a;
+    cursor: pointer;
+    border: 2px solid #1a1a1a;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px;
+    background: #c41e3a;
+    cursor: pointer;
+    border: 2px solid #1a1a1a;
+    border-radius: 0;
+  }
+  select {
+    font-family: 'Courier Prime', monospace;
+    font-size: 14px;
+    padding: 8px 12px;
+    border: 2px solid #1a1a1a;
+    background: #fff;
+    width: 100%;
+    cursor: pointer;
+  }
+  select:focus { outline: 2px solid #c41e3a; }
+
+  button.action-btn {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    padding: 10px 24px;
+    background: #c41e3a;
+    color: #f5f0eb;
+    border: none;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.2s;
+    margin: 4px 4px 4px 0;
+  }
+  button.action-btn:hover { background: #a01830; }
+  button.action-btn.secondary {
+    background: #1a1a1a;
+  }
+  button.action-btn.secondary:hover { background: #333; }
+
+  .class-toggle {
+    display: flex;
+    gap: 0;
+    margin-bottom: 12px;
+  }
+  .class-toggle button {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: 2px;
+    padding: 8px 20px;
+    border: 2px solid #1a1a1a;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    background: #fff;
+    color: #1a1a1a;
+  }
+  .class-toggle button.active-class-a {
+    background: #c41e3a;
+    color: #fff;
+    border-color: #c41e3a;
+  }
+  .class-toggle button.active-class-b {
+    background: #1a1a1a;
+    color: #fff;
+  }
+
+  .stats {
+    background: #1a1a1a;
+    color: #f5f0eb;
+    padding: 12px 16px;
+    font-size: 13px;
+    margin-top: 12px;
+    line-height: 1.8;
+  }
+  .stats span { color: #c41e3a; font-weight: bold; }
+
+  /* --- KERNEL VIS --- */
+  .kernel-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+  }
+  .kernel-card {
+    border: 2px solid #1a1a1a;
+    padding: 0;
+    background: #fff;
+  }
+  .kernel-card .kc-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    background: #1a1a1a;
+    color: #f5f0eb;
+    padding: 8px 14px;
+    text-transform: uppercase;
+  }
+  .kernel-card canvas {
+    display: block;
+    width: 100%;
+  }
+
+  /* --- RESPONSIVE --- */
+  @media (max-width: 700px) {
+    header h1 { font-size: 32px; }
+    header::after { font-size: 100px; }
+    .tab-btn { font-size: 16px; padding: 10px 16px; }
+    .playground-area { flex-direction: column; }
+    .controls { max-width: 100%; }
+    .kernel-grid { grid-template-columns: 1fr; }
+    .tab-content { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>SVM</span> Playground</h1>
+  <p>Week 5 // Data Science & Machine Learning // Interactive exploration</p>
+</header>
+
+<nav class="tab-bar">
+  <button class="tab-btn active" data-tab="theory">Theory</button>
+  <button class="tab-btn" data-tab="hyperplane">Hyperplane</button>
+  <button class="tab-btn" data-tab="svm">SVM Sandbox</button>
+  <button class="tab-btn" data-tab="ktrick">Kernel Trick</button>
+  <button class="tab-btn" data-tab="kernels">Kernels</button>
+  <button class="tab-btn" data-tab="margin">Hard vs Soft</button>
+</nav>
+
+<!-- ==================== THEORY TAB ==================== -->
+<div id="theory" class="tab-content active">
+  <h2>What is an SVM?</h2>
+  <p>A <strong>Support Vector Machine</strong> is a supervised algorithm that finds the <strong>optimal hyperplane</strong> separating classes with the <strong>largest possible margin</strong>.</p>
+
+  <h3>Hyperplane & Margin</h3>
+  <p>The decision boundary is defined by:</p>
+  <div class="formula">w &middot; x + b = 0</div>
+  <p>The <strong>margin</strong> is the distance between the boundary and the closest points from each class. SVM maximizes this margin for better generalization.</p>
+
+  <h3>Support Vectors</h3>
+  <ul>
+    <li>The data points that sit exactly on the margin boundary</li>
+    <li>They alone define the hyperplane &mdash; remove other points and nothing changes</li>
+    <li>This makes SVMs memory-efficient: only critical points matter</li>
+  </ul>
+
+  <h3>Hard vs Soft Margin</h3>
+  <div class="note-box">
+    <strong>Hard margin:</strong> Perfect separation required. Fails on noisy or overlapping data.<br>
+    <strong>Soft margin:</strong> Allows misclassifications controlled by the <strong>C parameter</strong>.<br>
+    High C = strict (risk overfitting) &nbsp;|&nbsp; Low C = flexible (risk underfitting)
+  </div>
+
+  <h3>The Kernel Trick</h3>
+  <p>When data isn't linearly separable, a <strong>kernel function</strong> K(x, x') measures similarity and implicitly maps data to higher dimensions where linear separation becomes possible.</p>
+
+  <h3>Common Kernels</h3>
+  <ul>
+    <li><strong>Linear:</strong> K(x, x') = x &middot; x' &mdash; for linearly separable data</li>
+    <li><strong>Polynomial:</strong> K(x, x') = (x &middot; x' + c)<sup>d</sup> &mdash; captures feature interactions</li>
+    <li><strong>RBF (Gaussian):</strong> K(x, x') = exp(-&gamma; ||x - x'||&sup2;) &mdash; flexible, default choice</li>
+  </ul>
+
+  <div class="note-box">
+    <strong>Tip:</strong> Start simple (linear), increase complexity only if needed. Always scale features before training. Use cross-validation to tune C, &gamma;, and degree.
+  </div>
+</div>
+
+<!-- ==================== HYPERPLANE TAB ==================== -->
+<div id="hyperplane" class="tab-content">
+  <h2>Hyperplane & Decision Boundary</h2>
+  <p>A <strong>hyperplane</strong> is the boundary that separates classes. In 2D it's a line defined by <strong>w &middot; x + b = 0</strong>. Drag the sliders to control the line's orientation and position, and see how it classifies each region.</p>
+
+  <div class="playground-area">
+    <div class="canvas-wrap">
+      <span class="canvas-label">Decision boundary explorer</span>
+      <canvas id="hpCanvas" width="600" height="500"></canvas>
+    </div>
+    <div class="controls">
+      <h3>Hyperplane equation</h3>
+      <div class="formula" id="hpEquation">w₁·x₁ + w₂·x₂ + b = 0</div>
+
+      <div class="control-group">
+        <label>w₁ (horizontal weight) <span class="val" id="w1Val">1.00</span></label>
+        <input type="range" id="w1Slider" min="-3" max="3" step="0.05" value="1" oninput="drawHyperplane()">
+      </div>
+      <div class="control-group">
+        <label>w₂ (vertical weight) <span class="val" id="w2Val">0.00</span></label>
+        <input type="range" id="w2Slider" min="-3" max="3" step="0.05" value="0" oninput="drawHyperplane()">
+      </div>
+      <div class="control-group">
+        <label>b (bias / offset) <span class="val" id="bVal">0.00</span></label>
+        <input type="range" id="bSlider" min="-3" max="3" step="0.05" value="0" oninput="drawHyperplane()">
+      </div>
+
+      <div class="note-box">
+        <strong>w</strong> = normal vector (perpendicular to the line). It points toward the <strong>positive</strong> class region.<br>
+        <strong>b</strong> = bias. Shifts the line away from the origin.<br>
+        Points where w&middot;x + b &gt; 0 are <strong>Class +</strong>, otherwise <strong>Class &minus;</strong>.
+      </div>
+
+      <h3>Try it</h3>
+      <div>
+        <button class="action-btn secondary" onclick="hpPreset('vertical')">Vertical split</button>
+        <button class="action-btn secondary" onclick="hpPreset('horizontal')">Horizontal split</button>
+        <button class="action-btn secondary" onclick="hpPreset('diagonal')">Diagonal split</button>
+      </div>
+
+      <div class="control-group" style="margin-top:14px">
+        <label><input type="checkbox" id="hpShowPoints" onchange="drawHyperplane()" checked> Show sample points</label>
+      </div>
+      <div class="control-group">
+        <label><input type="checkbox" id="hpShowNormal" onchange="drawHyperplane()" checked> Show normal vector w</label>
+      </div>
+
+      <div class="stats" id="hpStats">
+        Correct: <span>--</span> | Misclassified: <span>--</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SVM SANDBOX TAB ==================== -->
+<div id="svm" class="tab-content">
+  <h2>SVM Sandbox</h2>
+  <p>Click on the canvas to add points. Choose a class, pick a kernel, and hit <strong>Train</strong> to see the decision boundary.</p>
+
+  <div class="playground-area">
+    <div class="canvas-wrap">
+      <span class="canvas-label">Feature space</span>
+      <canvas id="svmCanvas" width="600" height="500"></canvas>
+    </div>
+    <div class="controls">
+      <div class="class-toggle">
+        <button id="classABtn" class="active-class-a" onclick="setClass(0)">Class A</button>
+        <button id="classBBtn" onclick="setClass(1)">Class B</button>
+      </div>
+
+      <div class="control-group">
+        <label>Kernel</label>
+        <select id="kernelSelect">
+          <option value="linear">Linear</option>
+          <option value="rbf" selected>RBF (Gaussian)</option>
+          <option value="poly">Polynomial</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>C (regularization) <span class="val" id="cVal">1.00</span></label>
+        <input type="range" id="cSlider" min="-2" max="3" step="0.1" value="0" oninput="updateCVal()">
+      </div>
+
+      <div class="control-group">
+        <label>&gamma; (RBF/Poly) <span class="val" id="gammaVal">1.00</span></label>
+        <input type="range" id="gammaSlider" min="-2" max="2" step="0.1" value="0" oninput="updateGammaVal()">
+      </div>
+
+      <div class="control-group">
+        <label>Degree (Poly) <span class="val" id="degVal">3</span></label>
+        <input type="range" id="degSlider" min="2" max="6" step="1" value="3" oninput="document.getElementById('degVal').textContent=this.value">
+      </div>
+
+      <div>
+        <button class="action-btn" onclick="trainSVM()">Train</button>
+        <button class="action-btn secondary" onclick="clearCanvas()">Clear</button>
+        <button class="action-btn secondary" onclick="loadPreset('linear')">Preset: Linear</button>
+        <button class="action-btn secondary" onclick="loadPreset('circles')">Preset: Circles</button>
+        <button class="action-btn secondary" onclick="loadPreset('xor')">Preset: XOR</button>
+      </div>
+
+      <div class="stats" id="svmStats">
+        Points: <span>0</span> | Support vectors: <span>--</span> | Accuracy: <span>--</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== KERNEL TRICK TAB ==================== -->
+<div id="ktrick" class="tab-content">
+  <h2>The Kernel Trick</h2>
+  <p>Data that can't be separated by a line in 2D can often be separated in a <strong>higher-dimensional space</strong>. The kernel trick does this implicitly. Watch the transformation live.</p>
+
+  <div class="playground-area">
+    <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:16px">
+      <div class="canvas-wrap" style="flex:1">
+        <span class="canvas-label">Original 2D space</span>
+        <canvas id="kt2dCanvas" width="400" height="360"></canvas>
+      </div>
+      <div class="note-box" id="kt2dNote">
+        In 2D, no straight line can separate the red inner ring from the black outer ring.
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:60px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:#c41e3a;text-align:center">
+        &phi;(x)<br>
+        <span style="font-size:32px">&rarr;</span><br>
+        TRANSFORM
+      </div>
+    </div>
+
+    <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:16px">
+      <div class="canvas-wrap" style="flex:1">
+        <span class="canvas-label">Transformed feature space</span>
+        <canvas id="kt3dCanvas" width="400" height="360"></canvas>
+      </div>
+      <div class="note-box" id="kt3dNote">
+        After mapping &phi;(x) = (x₁, x₂, x₁² + x₂²), a flat plane can separate the classes!
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+    <div class="control-group" style="min-width:180px">
+      <label>Dataset</label>
+      <select id="ktDataset" onchange="genKtData();drawKernelTrick()">
+        <option value="circles" selected>Concentric circles</option>
+        <option value="xor">XOR pattern</option>
+      </select>
+    </div>
+    <div class="control-group" style="min-width:200px">
+      <label>Transformation &phi;</label>
+      <select id="ktTransform" onchange="drawKernelTrick()">
+        <option value="radial" selected>&phi; = (x₁, x₂, x₁² + x₂²)</option>
+        <option value="product">&phi; = (x₁, x₂, x₁ &middot; x₂)</option>
+        <option value="poly2">&phi; = (x₁², x₂², √2·x₁·x₂)</option>
+      </select>
+    </div>
+    <div class="control-group" style="min-width:180px">
+      <label>3D rotation <span class="val" id="ktRotVal">0°</span></label>
+      <input type="range" id="ktRotSlider" min="0" max="360" step="1" value="30" oninput="drawKernelTrick()">
+    </div>
+    <div class="control-group" style="min-width:180px">
+      <label>3D tilt <span class="val" id="ktTiltVal">25°</span></label>
+      <input type="range" id="ktTiltSlider" min="0" max="80" step="1" value="25" oninput="drawKernelTrick()">
+    </div>
+    <div>
+      <button class="action-btn" onclick="drawKernelTrick()">Regenerate</button>
+      <button class="action-btn secondary" id="ktAnimBtn" onclick="toggleKtAnim()">Animate</button>
+    </div>
+  </div>
+
+  <div class="note-box" style="margin-top:16px">
+    <strong>Key insight:</strong> The kernel function K(x, x') = &phi;(x) &middot; &phi;(x') computes the dot product in the transformed space <em>without ever explicitly computing &phi;</em>. This is the "trick" &mdash; we get the power of high-dimensional separation at the cost of a simple function evaluation.
+  </div>
+</div>
+
+<!-- ==================== KERNELS TAB ==================== -->
+<div id="kernels" class="tab-content">
+  <h2>Kernel Comparison</h2>
+  <p>The same dataset classified with four different kernels. Click <strong>Generate & Compare</strong> to see how each kernel draws its decision boundary on random data.</p>
+
+  <div style="margin: 16px 0">
+    <button class="action-btn" onclick="generateKernelComparison()">Generate & Compare</button>
+    <div class="control-group" style="display:inline-block;margin-left:16px;vertical-align:middle">
+      <label style="display:inline">Dataset</label>
+      <select id="kernelDataset" style="width:auto;display:inline">
+        <option value="blobs">Blobs</option>
+        <option value="circles">Circles</option>
+        <option value="moons">Moons</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="kernel-grid">
+    <div class="kernel-card">
+      <div class="kc-title">Linear</div>
+      <canvas id="kLinear" width="350" height="300"></canvas>
+    </div>
+    <div class="kernel-card">
+      <div class="kc-title">Polynomial (d=3)</div>
+      <canvas id="kPoly" width="350" height="300"></canvas>
+    </div>
+    <div class="kernel-card">
+      <div class="kc-title">RBF (&gamma;=1)</div>
+      <canvas id="kRBF" width="350" height="300"></canvas>
+    </div>
+    <div class="kernel-card">
+      <div class="kc-title">RBF (&gamma;=5)</div>
+      <canvas id="kRBFHigh" width="350" height="300"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== HARD VS SOFT TAB ==================== -->
+<div id="margin" class="tab-content">
+  <h2>Hard vs Soft Margin</h2>
+  <p>See how the <strong>C parameter</strong> controls the trade-off between a wide margin and correct classification. Drag the slider to explore.</p>
+
+  <div class="playground-area">
+    <div class="canvas-wrap">
+      <span class="canvas-label">Margin visualization</span>
+      <canvas id="marginCanvas" width="600" height="500"></canvas>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <label>C parameter <span class="val" id="marginCVal">1.00</span></label>
+        <input type="range" id="marginCSlider" min="-2" max="3" step="0.1" value="0" oninput="updateMarginC()">
+      </div>
+      <div class="note-box">
+        <strong>Low C</strong> &rarr; wide margin, allows errors (soft)<br>
+        <strong>High C</strong> &rarr; narrow margin, fewer errors (hard-like)
+      </div>
+      <div>
+        <button class="action-btn" onclick="generateMarginData()">New Data</button>
+      </div>
+      <div class="stats" id="marginStats">
+        C: <span>1.00</span> | Margin width: <span>--</span> | Errors: <span>--</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =====================================================
+// TABS
+// =====================================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+// =====================================================
+// SIMPLE SVM ENGINE (SMO-lite for 2D)
+// =====================================================
+// Normalize data to zero-mean, unit-variance for stable SVM training
+function normalizeData(X) {
+  const n = X.length;
+  if (n === 0) return { Xn: X, mean: [0,0], std: [1,1] };
+  let mean = [0,0], std = [0,0];
+  for (const x of X) { mean[0] += x[0]; mean[1] += x[1]; }
+  mean[0] /= n; mean[1] /= n;
+  for (const x of X) { std[0] += (x[0]-mean[0])**2; std[1] += (x[1]-mean[1])**2; }
+  std[0] = Math.sqrt(std[0]/n) || 1; std[1] = Math.sqrt(std[1]/n) || 1;
+  const Xn = X.map(x => [(x[0]-mean[0])/std[0], (x[1]-mean[1])/std[1]]);
+  return { Xn, mean, std };
+}
+
+class SimpleSVM {
+  constructor(kernel = 'rbf', C = 1, gamma = 1, degree = 3) {
+    this.kernel = kernel;
+    this.C = C;
+    this.gamma = gamma;
+    this.degree = degree;
+    this.alphas = [];
+    this.b = 0;
+    this.X = [];
+    this.y = [];
+    this.supportIndices = [];
+    this.norm = null; // normalization params
+  }
+
+  kernelFn(x1, x2) {
+    if (this.kernel === 'linear') {
+      return x1[0]*x2[0] + x1[1]*x2[1];
+    } else if (this.kernel === 'rbf') {
+      const d0 = x1[0]-x2[0], d1 = x1[1]-x2[1];
+      return Math.exp(-this.gamma * (d0*d0 + d1*d1));
+    } else if (this.kernel === 'poly') {
+      const dot = x1[0]*x2[0] + x1[1]*x2[1];
+      return Math.pow(dot + 1, this.degree);
+    }
+    return 0;
+  }
+
+  // Pre-compute kernel matrix for speed and consistency
+  fit(Xraw, y, maxIter = 300) {
+    const norm = normalizeData(Xraw);
+    this.norm = norm;
+    const X = norm.Xn;
+    const n = X.length;
+    this.X = X; this.y = y;
+    this.alphas = new Array(n).fill(0);
+    this.b = 0;
+
+    // precompute kernel matrix
+    const K = [];
+    for (let i = 0; i < n; i++) {
+      K[i] = new Float64Array(n);
+      for (let j = 0; j < n; j++) K[i][j] = this.kernelFn(X[i], X[j]);
+    }
+
+    // error cache
+    const E = new Float64Array(n);
+    for (let i = 0; i < n; i++) E[i] = this._predictCached(i, K) - y[i];
+
+    const tol = 1e-3;
+    let passes = 0;
+
+    for (let iter = 0; iter < maxIter; iter++) {
+      let changed = 0;
+      for (let i = 0; i < n; i++) {
+        E[i] = this._predictCached(i, K) - y[i];
+        if ((y[i]*E[i] < -tol && this.alphas[i] < this.C) ||
+            (y[i]*E[i] > tol && this.alphas[i] > 0)) {
+
+          // Pick j with max |Ei - Ej| (second choice heuristic)
+          let j = -1, maxDelta = -1;
+          for (let k = 0; k < n; k++) {
+            if (k === i) continue;
+            const delta = Math.abs(E[i] - E[k]);
+            if (delta > maxDelta) { maxDelta = delta; j = k; }
+          }
+          if (j === -1) continue;
+
+          E[j] = this._predictCached(j, K) - y[j];
+
+          const ai = this.alphas[i], aj = this.alphas[j];
+          let L, H;
+          if (y[i] !== y[j]) {
+            L = Math.max(0, aj - ai);
+            H = Math.min(this.C, this.C + aj - ai);
+          } else {
+            L = Math.max(0, ai + aj - this.C);
+            H = Math.min(this.C, ai + aj);
+          }
+          if (Math.abs(L - H) < 1e-8) continue;
+
+          const eta = 2*K[i][j] - K[i][i] - K[j][j];
+          if (eta >= 0) continue;
+
+          let newAj = aj - y[j]*(E[i] - E[j])/eta;
+          newAj = Math.max(L, Math.min(H, newAj));
+          if (Math.abs(newAj - aj) < 1e-5) continue;
+
+          const newAi = ai + y[i]*y[j]*(aj - newAj);
+          const b1 = this.b - E[i] - y[i]*(newAi-ai)*K[i][i] - y[j]*(newAj-aj)*K[i][j];
+          const b2 = this.b - E[j] - y[i]*(newAi-ai)*K[i][j] - y[j]*(newAj-aj)*K[j][j];
+
+          if (newAi > 0 && newAi < this.C) this.b = b1;
+          else if (newAj > 0 && newAj < this.C) this.b = b2;
+          else this.b = (b1+b2)/2;
+
+          this.alphas[i] = newAi;
+          this.alphas[j] = newAj;
+          changed++;
+        }
+      }
+      if (changed === 0) {
+        passes++;
+        if (passes >= 3) break; // require multiple clean passes
+      } else {
+        passes = 0;
+      }
+    }
+    this.supportIndices = [];
+    for (let i = 0; i < n; i++) {
+      if (this.alphas[i] > 1e-5) this.supportIndices.push(i);
+    }
+  }
+
+  _predictCached(idx, K) {
+    let s = this.b;
+    for (let i = 0; i < this.X.length; i++) {
+      if (this.alphas[i] > 1e-8) {
+        s += this.alphas[i] * this.y[i] * K[i][idx];
+      }
+    }
+    return s;
+  }
+
+  // Normalize input before predicting
+  _normalizePoint(x) {
+    if (!this.norm) return x;
+    return [(x[0]-this.norm.mean[0])/this.norm.std[0], (x[1]-this.norm.mean[1])/this.norm.std[1]];
+  }
+
+  _predict(x) {
+    const xn = this._normalizePoint(x);
+    let s = this.b;
+    for (let i = 0; i < this.X.length; i++) {
+      if (this.alphas[i] > 1e-8) {
+        s += this.alphas[i] * this.y[i] * this.kernelFn(this.X[i], xn);
+      }
+    }
+    return s;
+  }
+
+  predict(x) {
+    return this._predict(x) >= 0 ? 1 : -1;
+  }
+
+  score(x) { return this._predict(x); }
+}
+
+// =====================================================
+// SVM SANDBOX
+// =====================================================
+let points = [];
+let currentClass = 0;
+
+const svmCanvas = document.getElementById('svmCanvas');
+const svmCtx = svmCanvas.getContext('2d');
+
+function setClass(c) {
+  currentClass = c;
+  document.getElementById('classABtn').className = c === 0 ? 'active-class-a' : '';
+  document.getElementById('classBBtn').className = c === 1 ? 'active-class-b' : '';
+}
+
+function updateCVal() {
+  const v = Math.pow(10, parseFloat(document.getElementById('cSlider').value)).toFixed(2);
+  document.getElementById('cVal').textContent = v;
+}
+function updateGammaVal() {
+  const v = Math.pow(10, parseFloat(document.getElementById('gammaSlider').value)).toFixed(2);
+  document.getElementById('gammaVal').textContent = v;
+}
+updateCVal(); updateGammaVal();
+
+svmCanvas.addEventListener('click', (e) => {
+  const rect = svmCanvas.getBoundingClientRect();
+  const sx = svmCanvas.width / rect.width;
+  const sy = svmCanvas.height / rect.height;
+  const x = (e.clientX - rect.left) * sx;
+  const y = (e.clientY - rect.top) * sy;
+  points.push({ x, y, cls: currentClass });
+  drawPoints();
+});
+
+function drawGrid() {
+  const W = svmCanvas.width, H = svmCanvas.height;
+  svmCtx.clearRect(0, 0, W, H);
+  svmCtx.strokeStyle = '#e0dbd5';
+  svmCtx.lineWidth = 0.5;
+  for (let gx = 0; gx < W; gx += 40) { svmCtx.beginPath(); svmCtx.moveTo(gx,0); svmCtx.lineTo(gx,H); svmCtx.stroke(); }
+  for (let gy = 0; gy < H; gy += 40) { svmCtx.beginPath(); svmCtx.moveTo(0,gy); svmCtx.lineTo(W,gy); svmCtx.stroke(); }
+}
+
+function drawPointsOnly(svIndices) {
+  points.forEach((p, i) => {
+    const isSV = svIndices && svIndices.includes(i);
+    svmCtx.beginPath();
+    svmCtx.arc(p.x, p.y, isSV ? 9 : 6, 0, Math.PI * 2);
+    svmCtx.fillStyle = p.cls === 0 ? '#c41e3a' : '#1a1a1a';
+    svmCtx.fill();
+    if (isSV) {
+      svmCtx.strokeStyle = '#f5f0eb';
+      svmCtx.lineWidth = 3;
+      svmCtx.stroke();
+      svmCtx.strokeStyle = p.cls === 0 ? '#c41e3a' : '#1a1a1a';
+      svmCtx.lineWidth = 1.5;
+      svmCtx.stroke();
+    }
+  });
+}
+
+function drawPoints() {
+  drawGrid();
+  drawPointsOnly();
+  updateStats();
+}
+
+function updateStats(sv, acc) {
+  const el = document.getElementById('svmStats');
+  el.innerHTML = `Points: <span>${points.length}</span> | Support vectors: <span>${sv !== undefined ? sv : '--'}</span> | Accuracy: <span>${acc !== undefined ? acc + '%' : '--'}</span>`;
+}
+
+function clearCanvas() {
+  points = [];
+  svmCtx.clearRect(0, 0, svmCanvas.width, svmCanvas.height);
+  drawPoints();
+}
+
+function trainSVM() {
+  if (points.length < 3) return;
+  const classA = points.filter(p => p.cls === 0);
+  const classB = points.filter(p => p.cls === 1);
+  if (classA.length === 0 || classB.length === 0) return;
+
+  const W = svmCanvas.width, H = svmCanvas.height;
+  // Use raw pixel coordinates -- normalization happens inside SVM.fit()
+  const X = points.map(p => [p.x, p.y]);
+  const y = points.map(p => p.cls === 0 ? -1 : 1);
+
+  const kernel = document.getElementById('kernelSelect').value;
+  const C = Math.pow(10, parseFloat(document.getElementById('cSlider').value));
+  const gamma = Math.pow(10, parseFloat(document.getElementById('gammaSlider').value));
+  const degree = parseInt(document.getElementById('degSlider').value);
+
+  const svm = new SimpleSVM(kernel, C, gamma, degree);
+  svm.fit(X, y, 800);
+
+  // draw decision boundary heatmap
+  const res = 3;
+  const imgData = svmCtx.createImageData(W, H);
+  for (let py = 0; py < H; py += res) {
+    for (let px = 0; px < W; px += res) {
+      const s = svm.score([px, py]);
+      const cls = s >= 0 ? 1 : 0;
+      const intensity = Math.min(Math.abs(s) * 0.8, 1);
+      let r, g, b;
+      if (cls === 0) {
+        r = 245 - (245-196)*intensity*0.5;
+        g = 240 - (240-30)*intensity*0.5;
+        b = 235 - (235-58)*intensity*0.5;
+      } else {
+        r = 240 - (240-26)*intensity*0.4;
+        g = 240 - (240-26)*intensity*0.4;
+        b = 240 - (240-26)*intensity*0.4;
+      }
+      for (let dy = 0; dy < res && py+dy < H; dy++) {
+        for (let dx = 0; dx < res && px+dx < W; dx++) {
+          const idx = ((py+dy)*W + (px+dx)) * 4;
+          imgData.data[idx] = r;
+          imgData.data[idx+1] = g;
+          imgData.data[idx+2] = b;
+          imgData.data[idx+3] = 140;
+        }
+      }
+    }
+  }
+  svmCtx.putImageData(imgData, 0, 0);
+
+  // draw decision boundary (score=0) and margin lines (score=+/-1)
+  drawContour(svm, W, H, 0, '#1a1a1a', 2.5);
+  drawContour(svm, W, H, 1, '#c41e3a', 1, [6,4]);
+  drawContour(svm, W, H, -1, '#c41e3a', 1, [6,4]);
+
+  // draw points on top (without clearing canvas)
+  drawPointsOnly(svm.supportIndices);
+
+  const correct = X.reduce((acc, xi, i) => acc + (svm.predict(xi) === y[i] ? 1 : 0), 0);
+  updateStats(svm.supportIndices.length, Math.round(100*correct/X.length));
+}
+
+function drawContour(svm, W, H, level, color, lineWidth, dash) {
+  const step = 6;
+  svmCtx.strokeStyle = color;
+  svmCtx.lineWidth = lineWidth;
+  svmCtx.setLineDash(dash || []);
+  for (let py = 0; py < H - step; py += step) {
+    for (let px = 0; px < W - step; px += step) {
+      const s00 = svm.score([px, py]) - level;
+      const s10 = svm.score([px+step, py]) - level;
+      const s01 = svm.score([px, py+step]) - level;
+      const s11 = svm.score([px+step, py+step]) - level;
+      const segs = marchingSquaresCell(s00, s10, s01, s11, px, py, step);
+      for (const seg of segs) {
+        svmCtx.beginPath();
+        svmCtx.moveTo(seg[0], seg[1]);
+        svmCtx.lineTo(seg[2], seg[3]);
+        svmCtx.stroke();
+      }
+    }
+  }
+  svmCtx.setLineDash([]);
+}
+
+function marchingSquaresCell(v00, v10, v01, v11, x, y, s) {
+  const segs = [];
+  const idx = (v00 > 0 ? 8 : 0) | (v10 > 0 ? 4 : 0) | (v11 > 0 ? 2 : 0) | (v01 > 0 ? 1 : 0);
+  const lerp = (a, b) => a / (a - b);
+  const t = lerp(v00, v10), r = lerp(v10, v11), b_ = lerp(v01, v11), l = lerp(v00, v01);
+  const pts = {
+    t: [x + t*s, y],
+    r: [x + s, y + r*s],
+    b: [x + b_*s, y + s],
+    l: [x, y + l*s]
+  };
+  const lines = {
+    1: [['l','b']], 2: [['b','r']], 3: [['l','r']], 4: [['t','r']], 5: [['t','l'],['b','r']],
+    6: [['t','b']], 7: [['t','l']], 8: [['t','l']], 9: [['t','b']], 10: [['t','r'],['b','l']],
+    11: [['t','r']], 12: [['l','r']], 13: [['b','r']], 14: [['l','b']]
+  };
+  if (lines[idx]) {
+    for (const [a, b] of lines[idx]) {
+      segs.push([pts[a][0], pts[a][1], pts[b][0], pts[b][1]]);
+    }
+  }
+  return segs;
+}
+
+// --- Presets ---
+function loadPreset(type) {
+  clearCanvas();
+  const W = svmCanvas.width, H = svmCanvas.height;
+  const cx = W/2, cy = H/2;
+  if (type === 'linear') {
+    for (let i = 0; i < 30; i++) {
+      points.push({ x: cx - 120 + rand(-60,60), y: cy + rand(-150,150), cls: 0 });
+      points.push({ x: cx + 120 + rand(-60,60), y: cy + rand(-150,150), cls: 1 });
+    }
+  } else if (type === 'circles') {
+    for (let i = 0; i < 40; i++) {
+      const a1 = Math.random()*Math.PI*2, r1 = 30 + rand(-15,15);
+      points.push({ x: cx + r1*Math.cos(a1), y: cy + r1*Math.sin(a1), cls: 0 });
+      const a2 = Math.random()*Math.PI*2, r2 = 130 + rand(-25,25);
+      points.push({ x: cx + r2*Math.cos(a2), y: cy + r2*Math.sin(a2), cls: 1 });
+    }
+  } else if (type === 'xor') {
+    for (let i = 0; i < 25; i++) {
+      points.push({ x: cx - 100 + rand(-50,50), y: cy - 100 + rand(-50,50), cls: 0 });
+      points.push({ x: cx + 100 + rand(-50,50), y: cy + 100 + rand(-50,50), cls: 0 });
+      points.push({ x: cx + 100 + rand(-50,50), y: cy - 100 + rand(-50,50), cls: 1 });
+      points.push({ x: cx - 100 + rand(-50,50), y: cy + 100 + rand(-50,50), cls: 1 });
+    }
+  }
+  drawPoints();
+}
+function rand(a,b) { return a + Math.random()*(b-a); }
+
+// =====================================================
+// KERNELS TAB
+// =====================================================
+function generateKernelComparison() {
+  const dataset = document.getElementById('kernelDataset').value;
+
+  const configs = [
+    { id: 'kLinear', kernel: 'linear', C: 1, gamma: 1, degree: 3 },
+    { id: 'kPoly', kernel: 'poly', C: 1, gamma: 1, degree: 3 },
+    { id: 'kRBF', kernel: 'rbf', C: 1, gamma: 1, degree: 3 },
+    { id: 'kRBFHigh', kernel: 'rbf', C: 1, gamma: 5, degree: 3 },
+  ];
+
+  configs.forEach(cfg => {
+    const canvas = document.getElementById(cfg.id);
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    // Generate data in pixel coordinates for this canvas
+    const data = genDataset(dataset, 80, W, H);
+
+    const svm = new SimpleSVM(cfg.kernel, cfg.C, cfg.gamma, cfg.degree);
+    svm.fit(data.X, data.y, 800);
+
+    const res = 4;
+    const imgData = ctx.createImageData(W, H);
+    for (let py = 0; py < H; py += res) {
+      for (let px = 0; px < W; px += res) {
+        const s = svm.score([px, py]);
+        const cls = s >= 0 ? 1 : 0;
+        const intensity = Math.min(Math.abs(s)*0.8, 1);
+        let r, g, b;
+        if (cls === 0) {
+          r = 245 - (245-196)*intensity*0.5; g = 240 - (240-30)*intensity*0.5; b = 235 - (235-58)*intensity*0.5;
+        } else {
+          r = 240 - (240-26)*intensity*0.4; g = 240 - (240-26)*intensity*0.4; b = 240 - (240-26)*intensity*0.4;
+        }
+        for (let dy = 0; dy < res && py+dy < H; dy++) {
+          for (let dx = 0; dx < res && px+dx < W; dx++) {
+            const idx = ((py+dy)*W + (px+dx))*4;
+            imgData.data[idx]=r; imgData.data[idx+1]=g; imgData.data[idx+2]=b; imgData.data[idx+3]=140;
+          }
+        }
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    data.X.forEach((xi, i) => {
+      ctx.beginPath();
+      ctx.arc(xi[0], xi[1], 4, 0, Math.PI*2);
+      ctx.fillStyle = data.y[i] === -1 ? '#c41e3a' : '#1a1a1a';
+      ctx.fill();
+      ctx.strokeStyle = '#f5f0eb';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+  });
+}
+
+function genDataset(type, n, W, H) {
+  W = W || 350; H = H || 300;
+  const cx = W/2, cy = H/2;
+  const X = [], y = [];
+  if (type === 'blobs') {
+    for (let i = 0; i < n; i++) {
+      const cls = i < n/2 ? -1 : 1;
+      const ox = cls === -1 ? -W*0.18 : W*0.18;
+      const oy = cls === -1 ? -H*0.15 : H*0.15;
+      X.push([cx + ox + randn()*W*0.08, cy + oy + randn()*H*0.08]);
+      y.push(cls);
+    }
+  } else if (type === 'circles') {
+    const scale = Math.min(W, H);
+    for (let i = 0; i < n; i++) {
+      const cls = i < n/2 ? -1 : 1;
+      const a = Math.random()*Math.PI*2;
+      const r = cls === -1 ? scale*0.1 + randn()*scale*0.025 : scale*0.3 + randn()*scale*0.035;
+      X.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      y.push(cls);
+    }
+  } else if (type === 'moons') {
+    const scale = Math.min(W, H)*0.3;
+    for (let i = 0; i < n; i++) {
+      const cls = i < n/2 ? -1 : 1;
+      const a = Math.random()*Math.PI;
+      if (cls === -1) {
+        X.push([cx - scale*0.2 + scale*Math.cos(a) + randn()*scale*0.12, cy - scale*0.3 - scale*Math.sin(a)*0.8 + randn()*scale*0.12]);
+      } else {
+        X.push([cx + scale*0.2 - scale*Math.cos(a) + randn()*scale*0.12, cy + scale*0.3 + scale*Math.sin(a)*0.8 + randn()*scale*0.12]);
+      }
+      y.push(cls);
+    }
+  }
+  return { X, y };
+}
+
+function randn() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+
+// =====================================================
+// HARD VS SOFT MARGIN TAB
+// =====================================================
+let marginData = null;
+
+function generateMarginData() {
+  const canvas = document.getElementById('marginCanvas');
+  marginData = genDataset('blobs', 60, canvas.width, canvas.height);
+  // add noise
+  for (let i = 0; i < 6; i++) {
+    const idx = Math.floor(Math.random() * marginData.y.length);
+    marginData.y[idx] *= -1;
+  }
+  updateMarginC();
+}
+
+function updateMarginC() {
+  const cLog = parseFloat(document.getElementById('marginCSlider').value);
+  const C = Math.pow(10, cLog);
+  document.getElementById('marginCVal').textContent = C.toFixed(2);
+  if (!marginData) generateMarginData();
+  trainMarginSVM(C);
+}
+
+function trainMarginSVM(C) {
+  const canvas = document.getElementById('marginCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const svm = new SimpleSVM('linear', C, 1, 3);
+  svm.fit(marginData.X, marginData.y, 800);
+
+  const res = 4;
+  const imgData = ctx.createImageData(W, H);
+  for (let py = 0; py < H; py += res) {
+    for (let px = 0; px < W; px += res) {
+      const s = svm.score([px, py]);
+      const cls = s >= 0 ? 1 : 0;
+      const dist = Math.abs(s);
+      const inMargin = dist < 1;
+      let r, g, b, a = 100;
+      if (cls === 0) {
+        r = inMargin ? 230 : 220; g = inMargin ? 200 : 180; b = inMargin ? 200 : 190;
+      } else {
+        r = inMargin ? 220 : 210; g = inMargin ? 220 : 210; b = inMargin ? 220 : 210;
+      }
+      if (inMargin) a = 60;
+      for (let dy = 0; dy < res && py+dy < H; dy++) {
+        for (let dx = 0; dx < res && px+dx < W; dx++) {
+          const idx = ((py+dy)*W + (px+dx))*4;
+          imgData.data[idx]=r; imgData.data[idx+1]=g; imgData.data[idx+2]=b; imgData.data[idx+3]=a;
+        }
+      }
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  drawContourOn(ctx, svm, W, H, 0, '#1a1a1a', 2.5, []);
+  drawContourOn(ctx, svm, W, H, 1, '#c41e3a', 1.5, [8,4]);
+  drawContourOn(ctx, svm, W, H, -1, '#c41e3a', 1.5, [8,4]);
+
+  let errors = 0;
+  marginData.X.forEach((xi, i) => {
+    const pred = svm.predict(xi);
+    if (pred !== marginData.y[i]) errors++;
+    const isSV = svm.supportIndices.includes(i);
+    ctx.beginPath();
+    ctx.arc(xi[0], xi[1], isSV ? 8 : 5, 0, Math.PI*2);
+    ctx.fillStyle = marginData.y[i] === -1 ? '#c41e3a' : '#1a1a1a';
+    ctx.fill();
+    if (isSV) {
+      ctx.strokeStyle = '#f5f0eb'; ctx.lineWidth = 3; ctx.stroke();
+    }
+    if (pred !== marginData.y[i]) {
+      ctx.beginPath();
+      const sz = 6;
+      ctx.moveTo(xi[0] - sz, xi[1] - sz);
+      ctx.lineTo(xi[0] + sz, xi[1] + sz);
+      ctx.moveTo(xi[0] + sz, xi[1] - sz);
+      ctx.lineTo(xi[0] - sz, xi[1] + sz);
+      ctx.strokeStyle = '#ff0'; ctx.lineWidth = 2; ctx.stroke();
+    }
+  });
+
+  document.getElementById('marginStats').innerHTML =
+    `C: <span>${C.toFixed(2)}</span> | Support vectors: <span>${svm.supportIndices.length}</span> | Misclassified: <span>${errors}</span>`;
+}
+
+function drawContourOn(ctx, svm, W, H, level, color, lineWidth, dash) {
+  const step = 6;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.setLineDash(dash);
+  for (let py = 0; py < H - step; py += step) {
+    for (let px = 0; px < W - step; px += step) {
+      const s00 = svm.score([px, py]) - level;
+      const s10 = svm.score([px+step, py]) - level;
+      const s01 = svm.score([px, py+step]) - level;
+      const s11 = svm.score([px+step, py+step]) - level;
+      const segs = marchingSquaresCell(s00, s10, s01, s11, px, py, step);
+      for (const seg of segs) {
+        ctx.beginPath(); ctx.moveTo(seg[0], seg[1]); ctx.lineTo(seg[2], seg[3]); ctx.stroke();
+      }
+    }
+  }
+  ctx.setLineDash([]);
+}
+
+// =====================================================
+// KERNEL TRICK TAB
+// =====================================================
+const kt2d = document.getElementById('kt2dCanvas');
+const kt3d = document.getElementById('kt3dCanvas');
+const kt2dCtx = kt2d.getContext('2d');
+const kt3dCtx = kt3d.getContext('2d');
+
+let ktData = [];
+let ktAnimId = null;
+
+function genKtData() {
+  ktData = [];
+  const dataset = document.getElementById('ktDataset').value;
+  if (dataset === 'circles') {
+    for (let i = 0; i < 60; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 0.35 + randn() * 0.08;
+      ktData.push({ x: r*Math.cos(a), y: r*Math.sin(a), label: -1 });
+    }
+    for (let i = 0; i < 40; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 1.2 + randn() * 0.15;
+      ktData.push({ x: r*Math.cos(a), y: r*Math.sin(a), label: 1 });
+    }
+    document.getElementById('kt2dNote').textContent = 'In 2D, no straight line can separate the red inner ring from the black outer ring.';
+  } else { // xor
+    for (let i = 0; i < 25; i++) {
+      ktData.push({ x: -0.8 + randn()*0.25, y: -0.8 + randn()*0.25, label: -1 });
+      ktData.push({ x:  0.8 + randn()*0.25, y:  0.8 + randn()*0.25, label: -1 });
+      ktData.push({ x:  0.8 + randn()*0.25, y: -0.8 + randn()*0.25, label: 1 });
+      ktData.push({ x: -0.8 + randn()*0.25, y:  0.8 + randn()*0.25, label: 1 });
+    }
+    document.getElementById('kt2dNote').textContent = 'In 2D, no single line can separate the XOR pattern (diagonal clusters share labels).';
+  }
+}
+
+function ktTransformPoint(p) {
+  const tf = document.getElementById('ktTransform').value;
+  if (tf === 'radial') return [p.x, p.y, p.x*p.x + p.y*p.y];
+  if (tf === 'product') return [p.x, p.y, p.x * p.y];
+  if (tf === 'poly2') return [p.x*p.x, p.y*p.y, Math.sqrt(2)*p.x*p.y];
+  return [p.x, p.y, 0];
+}
+
+// Simple 3D projection (isometric-ish with rotation)
+function project3D(x, y, z, rotDeg, tiltDeg) {
+  const r = rotDeg * Math.PI / 180;
+  const t = tiltDeg * Math.PI / 180;
+  // rotate around vertical (z) axis
+  const rx = x * Math.cos(r) - y * Math.sin(r);
+  const ry = x * Math.sin(r) + y * Math.cos(r);
+  const rz = z;
+  // tilt (rotate around horizontal axis)
+  const py = ry * Math.cos(t) - rz * Math.sin(t);
+  const pz = ry * Math.sin(t) + rz * Math.cos(t);
+  return [rx, py, pz];
+}
+
+function drawKernelTrick() {
+  if (ktData.length === 0) genKtData();
+
+  const rot = parseFloat(document.getElementById('ktRotSlider').value);
+  const tilt = parseFloat(document.getElementById('ktTiltSlider').value);
+  document.getElementById('ktRotVal').textContent = rot + '°';
+  document.getElementById('ktTiltVal').textContent = tilt + '°';
+
+  // --- 2D canvas ---
+  const W2 = kt2d.width, H2 = kt2d.height;
+  kt2dCtx.clearRect(0, 0, W2, H2);
+
+  // grid
+  kt2dCtx.strokeStyle = '#e0dbd5';
+  kt2dCtx.lineWidth = 0.5;
+  const s2 = Math.min(W2, H2) / 4;
+  const cx2 = W2/2, cy2 = H2/2;
+  for (let i = -2; i <= 2; i++) {
+    kt2dCtx.beginPath(); kt2dCtx.moveTo(cx2 + i*s2, 0); kt2dCtx.lineTo(cx2 + i*s2, H2); kt2dCtx.stroke();
+    kt2dCtx.beginPath(); kt2dCtx.moveTo(0, cy2 + i*s2); kt2dCtx.lineTo(W2, cy2 + i*s2); kt2dCtx.stroke();
+  }
+  // axes
+  kt2dCtx.strokeStyle = 'rgba(0,0,0,0.15)';
+  kt2dCtx.lineWidth = 1;
+  kt2dCtx.beginPath(); kt2dCtx.moveTo(cx2,0); kt2dCtx.lineTo(cx2,H2); kt2dCtx.stroke();
+  kt2dCtx.beginPath(); kt2dCtx.moveTo(0,cy2); kt2dCtx.lineTo(W2,cy2); kt2dCtx.stroke();
+  kt2dCtx.fillStyle = '#999'; kt2dCtx.font = '11px Courier Prime,monospace';
+  kt2dCtx.fillText('x₁', W2 - 20, cy2 - 5);
+  kt2dCtx.fillText('x₂', cx2 + 5, 14);
+
+  // attempt a dashed line to show "no linear separation"
+  kt2dCtx.setLineDash([6,6]);
+  kt2dCtx.strokeStyle = 'rgba(180,180,180,0.5)';
+  kt2dCtx.lineWidth = 1.5;
+  kt2dCtx.beginPath(); kt2dCtx.moveTo(0, H2); kt2dCtx.lineTo(W2, 0); kt2dCtx.stroke();
+  kt2dCtx.setLineDash([]);
+  kt2dCtx.fillStyle = 'rgba(150,150,150,0.5)';
+  kt2dCtx.font = '11px Courier Prime,monospace';
+  kt2dCtx.fillText('no linear separator', W2 - 140, 20);
+
+  // points
+  ktData.forEach(p => {
+    const px = cx2 + p.x * s2;
+    const py = cy2 - p.y * s2;
+    kt2dCtx.beginPath();
+    kt2dCtx.arc(px, py, 4.5, 0, Math.PI*2);
+    kt2dCtx.fillStyle = p.label === -1 ? '#c41e3a' : '#1a1a1a';
+    kt2dCtx.fill();
+  });
+
+  // --- 3D canvas ---
+  const W3 = kt3d.width, H3 = kt3d.height;
+  kt3dCtx.clearRect(0, 0, W3, H3);
+
+  // Transform all points
+  const transformed = ktData.map(p => {
+    const [tx, ty, tz] = ktTransformPoint(p);
+    return { tx, ty, tz, label: p.label };
+  });
+
+  // Find ranges for normalization
+  let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9,minZ=1e9,maxZ=-1e9;
+  transformed.forEach(p => {
+    if(p.tx<minX)minX=p.tx; if(p.tx>maxX)maxX=p.tx;
+    if(p.ty<minY)minY=p.ty; if(p.ty>maxY)maxY=p.ty;
+    if(p.tz<minZ)minZ=p.tz; if(p.tz>maxZ)maxZ=p.tz;
+  });
+  const rangeX = (maxX-minX)||1, rangeY = (maxY-minY)||1, rangeZ = (maxZ-minZ)||1;
+  const maxRange = Math.max(rangeX, rangeY, rangeZ);
+
+  // Normalize to [-1,1]
+  const norm3d = (p) => [
+    ((p.tx - (minX+maxX)/2) / maxRange) * 2,
+    ((p.ty - (minY+maxY)/2) / maxRange) * 2,
+    ((p.tz - (minZ+maxZ)/2) / maxRange) * 2
+  ];
+
+  // Project and sort by depth for proper overlap
+  const projected = transformed.map((p, i) => {
+    const [nx, ny, nz] = norm3d(p);
+    const [sx, sy, sz] = project3D(nx, ny, nz, rot, tilt);
+    return { sx, sy, depth: sz, label: p.label };
+  });
+  projected.sort((a, b) => a.depth - b.depth);
+
+  // Draw 3D axes
+  const scale3 = Math.min(W3, H3) * 0.35;
+  const cx3 = W3/2, cy3 = H3/2;
+  const axes = [
+    { dir: [1,0,0], label: document.getElementById('ktTransform').value === 'poly2' ? 'x₁²' : 'x₁', color: '#999' },
+    { dir: [0,1,0], label: document.getElementById('ktTransform').value === 'poly2' ? 'x₂²' : 'x₂', color: '#999' },
+    { dir: [0,0,1], label: document.getElementById('ktTransform').value === 'radial' ? 'x₁²+x₂²' : (document.getElementById('ktTransform').value === 'product' ? 'x₁·x₂' : '√2·x₁x₂'), color: '#c41e3a' }
+  ];
+  axes.forEach(ax => {
+    const [ex, ey] = project3D(ax.dir[0]*1.3, ax.dir[1]*1.3, ax.dir[2]*1.3, rot, tilt);
+    kt3dCtx.strokeStyle = ax.color;
+    kt3dCtx.lineWidth = 1;
+    kt3dCtx.setLineDash([4,3]);
+    kt3dCtx.beginPath();
+    kt3dCtx.moveTo(cx3, cy3);
+    kt3dCtx.lineTo(cx3 + ex*scale3, cy3 - ey*scale3);
+    kt3dCtx.stroke();
+    kt3dCtx.setLineDash([]);
+    kt3dCtx.fillStyle = ax.color;
+    kt3dCtx.font = ax.dir[2] ? 'bold 12px Courier Prime,monospace' : '11px Courier Prime,monospace';
+    kt3dCtx.fillText(ax.label, cx3 + ex*scale3 + 4, cy3 - ey*scale3 - 4);
+  });
+
+  // Draw separating plane hint (horizontal plane in transformed space for circles/radial)
+  const tf = document.getElementById('ktTransform').value;
+  const ds = document.getElementById('ktDataset').value;
+  if ((ds === 'circles' && tf === 'radial') || (ds === 'xor' && tf === 'product')) {
+    // draw a translucent quad at z ~ midpoint
+    const planeZ = 0;
+    const corners = [[-1,-1,planeZ],[1,-1,planeZ],[1,1,planeZ],[-1,1,planeZ]];
+    const projCorners = corners.map(c => {
+      const [sx,sy] = project3D(c[0],c[1],c[2], rot, tilt);
+      return [cx3 + sx*scale3, cy3 - sy*scale3];
+    });
+    kt3dCtx.fillStyle = 'rgba(196,30,58,0.08)';
+    kt3dCtx.strokeStyle = 'rgba(196,30,58,0.3)';
+    kt3dCtx.lineWidth = 1.5;
+    kt3dCtx.beginPath();
+    kt3dCtx.moveTo(projCorners[0][0], projCorners[0][1]);
+    for (let i = 1; i < 4; i++) kt3dCtx.lineTo(projCorners[i][0], projCorners[i][1]);
+    kt3dCtx.closePath();
+    kt3dCtx.fill();
+    kt3dCtx.stroke();
+
+    kt3dCtx.fillStyle = 'rgba(196,30,58,0.5)';
+    kt3dCtx.font = 'bold 12px Courier Prime,monospace';
+    const [lx,ly] = project3D(1.1, 1.1, planeZ, rot, tilt);
+    kt3dCtx.fillText('separating plane', cx3 + lx*scale3, cy3 - ly*scale3);
+  }
+
+  // Draw points
+  projected.forEach(p => {
+    const px = cx3 + p.sx * scale3;
+    const py = cy3 - p.sy * scale3;
+    const size = 3.5 + (p.depth + 1) * 1.5; // depth cue
+    const alpha = 0.5 + (p.depth + 1) * 0.25;
+    kt3dCtx.beginPath();
+    kt3dCtx.arc(px, py, size, 0, Math.PI*2);
+    kt3dCtx.fillStyle = p.label === -1
+      ? `rgba(196,30,58,${Math.min(alpha,1)})`
+      : `rgba(26,26,26,${Math.min(alpha,1)})`;
+    kt3dCtx.fill();
+  });
+
+  // Update note
+  const notes = {
+    'radial': 'After φ(x) = (x₁, x₂, x₁²+x₂²), inner points get low z-values and outer points get high z-values — a flat plane separates them!',
+    'product': 'After φ(x) = (x₁, x₂, x₁·x₂), the XOR clusters separate along the new axis — positive products vs negative.',
+    'poly2': 'The polynomial feature map φ(x) = (x₁², x₂², √2·x₁x₂) reshapes the space so clusters become linearly separable.'
+  };
+  document.getElementById('kt3dNote').textContent = notes[tf] || '';
+}
+
+let ktAnimAngle = 30;
+function toggleKtAnim() {
+  if (ktAnimId) {
+    cancelAnimationFrame(ktAnimId);
+    ktAnimId = null;
+    document.getElementById('ktAnimBtn').textContent = 'Animate';
+  } else {
+    document.getElementById('ktAnimBtn').textContent = 'Stop';
+    function step() {
+      ktAnimAngle = (ktAnimAngle + 0.5) % 360;
+      document.getElementById('ktRotSlider').value = Math.round(ktAnimAngle);
+      drawKernelTrick();
+      ktAnimId = requestAnimationFrame(step);
+    }
+    ktAnimId = requestAnimationFrame(step);
+  }
+}
+
+// Generate initial data on first draw
+genKtData();
+drawKernelTrick();
+
+// =====================================================
+// HYPERPLANE TAB
+// =====================================================
+const hpCanvas = document.getElementById('hpCanvas');
+const hpCtx = hpCanvas.getContext('2d');
+const HP_W = hpCanvas.width, HP_H = hpCanvas.height;
+
+// Fixed sample points (in normalized [-3,3] space) with true labels
+const hpPoints = [];
+(function generateHpPoints() {
+  // Class +1: right/top cluster
+  for (let i = 0; i < 20; i++) {
+    hpPoints.push({ x: 0.8 + randn()*0.6, y: 0.5 + randn()*0.8, label: 1 });
+  }
+  // Class -1: left/bottom cluster
+  for (let i = 0; i < 20; i++) {
+    hpPoints.push({ x: -0.8 + randn()*0.6, y: -0.5 + randn()*0.8, label: -1 });
+  }
+})();
+
+function hpPreset(name) {
+  if (name === 'vertical') {
+    document.getElementById('w1Slider').value = 1;
+    document.getElementById('w2Slider').value = 0;
+    document.getElementById('bSlider').value = 0;
+  } else if (name === 'horizontal') {
+    document.getElementById('w1Slider').value = 0;
+    document.getElementById('w2Slider').value = 1;
+    document.getElementById('bSlider').value = 0;
+  } else if (name === 'diagonal') {
+    document.getElementById('w1Slider').value = 1;
+    document.getElementById('w2Slider').value = 1;
+    document.getElementById('bSlider').value = 0;
+  }
+  drawHyperplane();
+}
+
+// Map normalized coords [-3,3] to canvas pixels
+function hpToCanvas(nx, ny) {
+  return [ (nx + 3) / 6 * HP_W, (3 - ny) / 6 * HP_H ];
+}
+// Map canvas pixels to normalized coords
+function hpFromCanvas(px, py) {
+  return [ px / HP_W * 6 - 3, 3 - py / HP_H * 6 ];
+}
+
+function drawHyperplane() {
+  const w1 = parseFloat(document.getElementById('w1Slider').value);
+  const w2 = parseFloat(document.getElementById('w2Slider').value);
+  const b  = parseFloat(document.getElementById('bSlider').value);
+  document.getElementById('w1Val').textContent = w1.toFixed(2);
+  document.getElementById('w2Val').textContent = w2.toFixed(2);
+  document.getElementById('bVal').textContent = b.toFixed(2);
+
+  // Update equation display
+  const fmt = (v, name) => {
+    const av = Math.abs(v);
+    const s = av === 1 ? name : av.toFixed(1) + name;
+    return v >= 0 ? '+ ' + s : '- ' + s;
+  };
+  let eq = '';
+  if (w1 !== 0) eq += (w1 < 0 ? '-' : '') + (Math.abs(w1)===1 ? '' : Math.abs(w1).toFixed(1)) + 'x₁ ';
+  if (w2 !== 0) eq += (w2 < 0 ? '- ' : (eq ? '+ ' : '')) + (Math.abs(w2)===1 ? '' : Math.abs(w2).toFixed(1)) + 'x₂ ';
+  if (b !== 0) eq += (b < 0 ? '- ' : '+ ') + Math.abs(b).toFixed(1) + ' ';
+  eq += '= 0';
+  if (w1 === 0 && w2 === 0) eq = '0 = 0 (degenerate)';
+  document.getElementById('hpEquation').textContent = eq;
+
+  const showPoints = document.getElementById('hpShowPoints').checked;
+  const showNormal = document.getElementById('hpShowNormal').checked;
+
+  hpCtx.clearRect(0, 0, HP_W, HP_H);
+
+  // Draw colored regions
+  const res = 4;
+  const imgData = hpCtx.createImageData(HP_W, HP_H);
+  for (let py = 0; py < HP_H; py += res) {
+    for (let px = 0; px < HP_W; px += res) {
+      const [nx, ny] = hpFromCanvas(px, py);
+      const s = w1*nx + w2*ny + b;
+      const side = s >= 0 ? 1 : 0;
+      const dist = Math.abs(s) / (Math.sqrt(w1*w1 + w2*w2) || 1);
+      const intensity = Math.min(dist * 0.3, 0.6);
+      let r, g, bv;
+      if (side === 1) {
+        // positive side -- dark region
+        r = Math.round(240 - (240-26)*intensity);
+        g = Math.round(240 - (240-26)*intensity);
+        bv = Math.round(240 - (240-26)*intensity);
+      } else {
+        // negative side -- red region
+        r = Math.round(245 - (245-196)*intensity);
+        g = Math.round(240 - (240-30)*intensity);
+        bv = Math.round(235 - (235-58)*intensity);
+      }
+      for (let dy = 0; dy < res && py+dy < HP_H; dy++) {
+        for (let dx = 0; dx < res && px+dx < HP_W; dx++) {
+          const idx = ((py+dy)*HP_W + (px+dx)) * 4;
+          imgData.data[idx] = r;
+          imgData.data[idx+1] = g;
+          imgData.data[idx+2] = bv;
+          imgData.data[idx+3] = 100;
+        }
+      }
+    }
+  }
+  hpCtx.putImageData(imgData, 0, 0);
+
+  // Draw grid
+  hpCtx.strokeStyle = 'rgba(0,0,0,0.06)';
+  hpCtx.lineWidth = 0.5;
+  for (let i = -3; i <= 3; i++) {
+    const [gx] = hpToCanvas(i, 0);
+    const [, gy] = hpToCanvas(0, i);
+    hpCtx.beginPath(); hpCtx.moveTo(gx, 0); hpCtx.lineTo(gx, HP_H); hpCtx.stroke();
+    hpCtx.beginPath(); hpCtx.moveTo(0, gy); hpCtx.lineTo(HP_W, gy); hpCtx.stroke();
+  }
+  // Axes
+  hpCtx.strokeStyle = 'rgba(0,0,0,0.2)';
+  hpCtx.lineWidth = 1;
+  const [ox, oy] = hpToCanvas(0, 0);
+  hpCtx.beginPath(); hpCtx.moveTo(ox, 0); hpCtx.lineTo(ox, HP_H); hpCtx.stroke();
+  hpCtx.beginPath(); hpCtx.moveTo(0, oy); hpCtx.lineTo(HP_W, oy); hpCtx.stroke();
+  // axis labels
+  hpCtx.fillStyle = '#999';
+  hpCtx.font = '12px Courier Prime, monospace';
+  hpCtx.fillText('x₁', HP_W - 20, oy - 6);
+  hpCtx.fillText('x₂', ox + 6, 16);
+
+  // Draw the hyperplane line (w1*x + w2*y + b = 0)
+  const wLen = Math.sqrt(w1*w1 + w2*w2);
+  if (wLen > 0.01) {
+    // find two points on the line within the viewport [-3,3]
+    const linePoints = [];
+    // try x boundaries
+    for (const nx of [-3, 3]) {
+      if (Math.abs(w2) > 0.001) {
+        const ny = -(w1*nx + b) / w2;
+        if (ny >= -3.5 && ny <= 3.5) linePoints.push([nx, ny]);
+      }
+    }
+    // try y boundaries
+    for (const ny of [-3, 3]) {
+      if (Math.abs(w1) > 0.001) {
+        const nx = -(w2*ny + b) / w1;
+        if (nx >= -3.5 && nx <= 3.5) linePoints.push([nx, ny]);
+      }
+    }
+
+    if (linePoints.length >= 2) {
+      const [p1x, p1y] = hpToCanvas(linePoints[0][0], linePoints[0][1]);
+      const [p2x, p2y] = hpToCanvas(linePoints[1][0], linePoints[1][1]);
+
+      // Hyperplane line
+      hpCtx.strokeStyle = '#1a1a1a';
+      hpCtx.lineWidth = 3;
+      hpCtx.beginPath();
+      hpCtx.moveTo(p1x, p1y);
+      hpCtx.lineTo(p2x, p2y);
+      hpCtx.stroke();
+
+      // Label
+      const mx = (p1x+p2x)/2, my = (p1y+p2y)/2;
+      hpCtx.fillStyle = '#1a1a1a';
+      hpCtx.font = 'bold 13px Courier Prime, monospace';
+      hpCtx.fillText('w·x + b = 0', mx + 8, my - 10);
+
+      // Draw normal vector w from center of line
+      if (showNormal) {
+        const scale = 40 / wLen;
+        const [nmx, nmy] = hpFromCanvas(mx, my);
+        const [arrowEndX, arrowEndY] = hpToCanvas(nmx + w1*scale*6/HP_W, nmy + w2*scale*6/HP_H);
+        // arrow actually in canvas pixel space
+        const nDx = w1 / wLen * 60;
+        const nDy = -w2 / wLen * 60; // negative because canvas y is flipped
+        hpCtx.strokeStyle = '#c41e3a';
+        hpCtx.lineWidth = 2.5;
+        hpCtx.beginPath();
+        hpCtx.moveTo(mx, my);
+        hpCtx.lineTo(mx + nDx, my + nDy);
+        hpCtx.stroke();
+        // arrowhead
+        const aLen = 10, aAng = Math.PI/6;
+        const ang = Math.atan2(nDy, nDx);
+        hpCtx.beginPath();
+        hpCtx.moveTo(mx + nDx, my + nDy);
+        hpCtx.lineTo(mx + nDx - aLen*Math.cos(ang-aAng), my + nDy - aLen*Math.sin(ang-aAng));
+        hpCtx.moveTo(mx + nDx, my + nDy);
+        hpCtx.lineTo(mx + nDx - aLen*Math.cos(ang+aAng), my + nDy - aLen*Math.sin(ang+aAng));
+        hpCtx.stroke();
+        hpCtx.fillStyle = '#c41e3a';
+        hpCtx.font = 'bold 14px Courier Prime, monospace';
+        hpCtx.fillText('w', mx + nDx + 6, my + nDy - 4);
+      }
+
+      // Region labels
+      // Find a point clearly on each side
+      const nxDir = w1/wLen, nyDir = w2/wLen;
+      const [posLx, posLy] = hpToCanvas(nxDir*1.8, nyDir*1.8);
+      const [negLx, negLy] = hpToCanvas(-nxDir*1.8, -nyDir*1.8);
+      hpCtx.font = 'bold 20px Bebas Neue, sans-serif';
+      hpCtx.fillStyle = 'rgba(26,26,26,0.5)';
+      hpCtx.fillText('CLASS +', Math.min(Math.max(posLx-30,10),HP_W-80), Math.min(Math.max(posLy,20),HP_H-10));
+      hpCtx.fillStyle = 'rgba(196,30,58,0.5)';
+      hpCtx.fillText('CLASS −', Math.min(Math.max(negLx-30,10),HP_W-80), Math.min(Math.max(negLy,20),HP_H-10));
+    }
+  }
+
+  // Draw sample points
+  let correct = 0, wrong = 0;
+  if (showPoints) {
+    hpPoints.forEach(p => {
+      const predicted = (w1*p.x + w2*p.y + b) >= 0 ? 1 : -1;
+      const isCorrect = predicted === p.label;
+      if (isCorrect) correct++; else wrong++;
+      const [cx, cy] = hpToCanvas(p.x, p.y);
+      hpCtx.beginPath();
+      hpCtx.arc(cx, cy, 6, 0, Math.PI*2);
+      hpCtx.fillStyle = p.label === 1 ? '#1a1a1a' : '#c41e3a';
+      hpCtx.fill();
+      if (!isCorrect) {
+        // X mark for misclassified
+        hpCtx.strokeStyle = '#FFD700';
+        hpCtx.lineWidth = 2;
+        hpCtx.beginPath();
+        hpCtx.moveTo(cx-5, cy-5); hpCtx.lineTo(cx+5, cy+5);
+        hpCtx.moveTo(cx+5, cy-5); hpCtx.lineTo(cx-5, cy+5);
+        hpCtx.stroke();
+      }
+    });
+  }
+  document.getElementById('hpStats').innerHTML =
+    `Correct: <span>${showPoints ? correct : '--'}</span> | Misclassified: <span>${showPoints ? wrong : '--'}</span>`;
+}
+
+// Initial draw
+drawPoints();
+drawHyperplane();
+</script>
+</body>
+</html>

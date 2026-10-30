@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AND & XOR — Neural Network Solutions</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #06050a;
+  --surface:  #0d0b14;
+  --surface2: #13111d;
+  --border:   #2a2040;
+  --border2:  #3d3060;
+  --violet:   #b794f4;
+  --violet2:  #805ad5;
+  --teal:     #4fd1c5;
+  --teal2:    #2c7a7b;
+  --gold:     #f6c90e;
+  --coral:    #fc8181;
+  --green:    #68d391;
+  --text:     #e2d9f3;
+  --text-dim: #6b5fa0;
+  --text-mid: #9d8ec4;
+  --node-on:  #b794f4;
+  --node-off: #2a2040;
+  --pos-w:    #4fd1c5;
+  --neg-w:    #fc8181;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Courier Prime',monospace;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 20%, rgba(128,90,213,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 80% 80%, rgba(79,209,197,0.05) 0%, transparent 70%);
+  pointer-events:none;z-index:0;
+}
+
+.container{position:relative;z-index:1;max-width:1160px;margin:0 auto;padding:0 24px 80px;}
+
+/* ── Header ── */
+header{
+  text-align:center;
+  padding:52px 0 44px;
+}
+.eyebrow{
+  display:inline-block;
+  font-size:11px;letter-spacing:4px;text-transform:uppercase;
+  color:var(--teal);border:1px solid var(--teal2);
+  padding:4px 14px;margin-bottom:18px;
+}
+h1{
+  font-family:'Bebas Neue',cursive;
+  font-size:clamp(2.8rem,6vw,5rem);
+  letter-spacing:2px;
+  line-height:1;
+  color:#fff;
+}
+h1 .hi1{color:var(--violet);}
+h1 .hi2{color:var(--teal);}
+.subhead{
+  margin-top:12px;font-size:13px;color:var(--text-dim);
+  line-height:1.8;max-width:560px;margin-left:auto;margin-right:auto;
+}
+
+/* ── Section title ── */
+.sec-title{
+  font-family:'Bebas Neue',cursive;
+  font-size:1.5rem;letter-spacing:3px;
+  display:flex;align-items:center;gap:14px;
+  color:#fff;margin-bottom:20px;
+}
+.sec-title .badge{
+  font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  padding:3px 10px;border-radius:2px;font-family:'Courier Prime',monospace;
+}
+.badge-and{background:rgba(183,148,244,0.15);color:var(--violet);border:1px solid var(--violet2);}
+.badge-xor{background:rgba(79,209,197,0.12);color:var(--teal);border:1px solid var(--teal2);}
+.badge-fail{background:rgba(252,129,129,0.12);color:var(--coral);border:1px solid #7a3333;}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── Card ── */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:4px;
+  padding:24px;
+  position:relative;
+  overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+}
+.card-violet::before{background:linear-gradient(90deg,var(--violet),transparent);}
+.card-teal::before  {background:linear-gradient(90deg,var(--teal),transparent);}
+.card-coral::before {background:linear-gradient(90deg,var(--coral),transparent);}
+
+/* ── Two-column layout ── */
+.two-col{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:24px;
+  align-items:start;
+}
+@media(max-width:760px){.two-col{grid-template-columns:1fr;}}
+
+/* ── Network canvas wrapper ── */
+.net-wrap{
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:3px;
+  padding:4px;
+  margin-bottom:16px;
+}
+canvas.net{display:block;width:100%;}
+canvas.plot{display:block;width:100%;border:1px solid var(--border);border-radius:3px;background:#06050a;}
+
+/* ── Input toggles ── */
+.input-row{
+  display:flex;gap:10px;align-items:center;
+  margin-bottom:14px;flex-wrap:wrap;
+}
+.inp-label{font-size:12px;color:var(--text-dim);width:20px;text-align:right;}
+.toggle-group{display:flex;gap:4px;}
+.tog{
+  width:42px;height:32px;
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  border-radius:2px;
+  color:var(--text-dim);
+  font-family:'Courier Prime',monospace;
+  font-size:14px;font-weight:700;
+  cursor:pointer;
+  transition:all 0.15s;
+}
+.tog.active-0{background:rgba(79,209,197,0.2);border-color:var(--teal);color:var(--teal);box-shadow:0 0 8px rgba(79,209,197,0.3);}
+.tog.active-1{background:rgba(183,148,244,0.2);border-color:var(--violet);color:var(--violet);box-shadow:0 0 8px rgba(183,148,244,0.3);}
+.inp-arrow{font-size:11px;color:var(--text-dim);}
+.output-box{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 14px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:3px;
+  font-size:13px;color:var(--text-dim);
+}
+.out-val{
+  font-size:1.4rem;font-weight:700;
+  min-width:28px;text-align:center;
+  transition:color 0.3s;
+}
+
+/* ── Truth table ── */
+table.tt{
+  width:100%;border-collapse:collapse;
+  font-size:12px;margin-bottom:14px;
+}
+table.tt th{
+  text-align:center;padding:6px 8px;
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--text-dim);border-bottom:1px solid var(--border);
+}
+table.tt td{
+  text-align:center;padding:7px 8px;
+  border-bottom:1px solid var(--border);
+  color:var(--text-mid);transition:all 0.2s;
+}
+table.tt tr.active td{background:rgba(183,148,244,0.1);color:#fff;}
+table.tt tr.active td .pred-correct{color:var(--green);}
+table.tt tr.active td .pred-wrong{color:var(--coral);}
+.pred-correct{color:var(--green);}
+.pred-wrong{color:var(--coral);}
+.val1{color:var(--violet);}
+.val0{color:var(--text-dim);}
+
+/* ── Controls ── */
+.btn-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+.btn{
+  padding:9px 16px;
+  border:1px solid var(--border2);
+  border-radius:3px;
+  background:transparent;
+  color:var(--text);
+  font-family:'Courier Prime',monospace;
+  font-size:12px;
+  cursor:pointer;
+  transition:all 0.15s;
+  letter-spacing:0.5px;
+}
+.btn:hover{border-color:var(--violet);color:var(--violet);background:rgba(183,148,244,0.08);}
+.btn.primary{background:var(--violet2);color:#fff;border-color:var(--violet2);font-weight:700;}
+.btn.primary:hover{background:var(--violet);box-shadow:0 0 18px rgba(183,148,244,0.35);}
+.btn.teal{border-color:var(--teal2);color:var(--teal);}
+.btn.teal:hover{background:rgba(79,209,197,0.1);}
+.btn.pulsing{animation:pulse-v 1s ease-in-out infinite;}
+@keyframes pulse-v{0%,100%{box-shadow:0 0 4px rgba(183,148,244,0.3);}50%{box-shadow:0 0 14px rgba(183,148,244,0.6);}}
+
+.stats-row{
+  display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;
+}
+.stat-pill{
+  flex:1;min-width:80px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:3px;
+  padding:8px 10px;text-align:center;
+}
+.stat-pill .sv{font-size:1.1rem;font-weight:700;color:#fff;line-height:1;}
+.stat-pill .sk{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-top:3px;}
+
+/* ── Weight display ── */
+.weights-wrap{
+  margin-top:12px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:3px;
+  padding:12px;
+}
+.wrow{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.wrow:last-child{margin-bottom:0;}
+.wlbl{font-size:11px;color:var(--text-dim);width:52px;flex-shrink:0;}
+.wbar-wrap{flex:1;height:4px;background:var(--border);border-radius:2px;position:relative;overflow:visible;}
+.wbar{position:absolute;height:100%;border-radius:2px;transition:left 0.4s ease,width 0.4s ease,background 0.4s;}
+.wnum{font-size:11px;font-weight:700;min-width:54px;text-align:right;transition:color 0.4s;}
+
+/* ── Separator / explanation ── */
+.explain-box{
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-left:3px solid var(--coral);
+  border-radius:4px;
+  padding:18px 20px;
+  margin-bottom:24px;
+}
+.explain-box h3{
+  font-family:'Bebas Neue',cursive;
+  font-size:1.1rem;letter-spacing:2px;color:var(--coral);
+  margin-bottom:10px;
+}
+.explain-box p{font-size:12px;color:var(--text-mid);line-height:1.9;margin-bottom:8px;}
+.explain-box code{
+  display:inline-block;
+  background:var(--surface);border:1px solid var(--border);
+  padding:1px 6px;border-radius:2px;
+  font-size:11px;color:var(--teal);
+}
+.plot-mini-wrap{margin-top:14px;}
+
+/* ── MLP architecture note ── */
+.arch-note{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  font-size:11px;color:var(--text-dim);margin-bottom:14px;
+}
+.arch-pill{
+  padding:4px 10px;border-radius:20px;
+  border:1px solid var(--border2);font-size:11px;
+}
+.arch-pill.inp{border-color:var(--teal2);color:var(--teal);}
+.arch-pill.hid{border-color:var(--violet2);color:var(--violet);}
+.arch-pill.out{border-color:var(--gold);color:var(--gold);}
+.arch-arrow{color:var(--text-dim);}
+
+/* ── Formula strip ── */
+.formula-strip{
+  display:flex;gap:14px;flex-wrap:wrap;
+  margin-top:32px;margin-bottom:40px;
+}
+.fcard{
+  flex:1;min-width:220px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:4px;padding:18px;
+  position:relative;overflow:hidden;
+}
+.fcard::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;}
+.fcard.f1::before{background:var(--violet);}
+.fcard.f2::before{background:var(--teal);}
+.fcard.f3::before{background:var(--gold);}
+.fcard h4{font-family:'Bebas Neue',cursive;font-size:1rem;letter-spacing:2px;margin-bottom:8px;color:#fff;}
+.fcard code{display:block;background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:8px 10px;font-size:12px;color:var(--teal);margin-bottom:8px;}
+.fcard p{font-size:11px;color:var(--text-dim);line-height:1.8;}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<header>
+  <div class="eyebrow">Neural Networks · Unit 2</div>
+  <h1><span class="hi1">AND</span> &amp; <span class="hi2">XOR</span></h1>
+  <p class="subhead">Why some problems need more than one layer — the classic argument for deep learning.</p>
+</header>
+
+<!-- ══════════════════════════════════════
+     AND GATE
+══════════════════════════════════════ -->
+<div class="sec-title">
+  AND Gate <span class="badge badge-and">Single Perceptron</span>
+</div>
+
+<div class="two-col" style="margin-bottom:40px;">
+
+  <!-- Network -->
+  <div class="card card-violet">
+    <div class="net-wrap">
+      <canvas id="and-net" class="net" height="220"></canvas>
+    </div>
+
+    <div class="input-row">
+      <span class="inp-label">A</span>
+      <div class="toggle-group">
+        <button class="tog active-0" id="and-a-0" onclick="andSetA(0)">0</button>
+        <button class="tog" id="and-a-1" onclick="andSetA(1)">1</button>
+      </div>
+      <span class="inp-label">B</span>
+      <div class="toggle-group">
+        <button class="tog active-0" id="and-b-0" onclick="andSetB(0)">0</button>
+        <button class="tog" id="and-b-1" onclick="andSetB(1)">1</button>
+      </div>
+      <span class="inp-arrow">→</span>
+      <div class="output-box">
+        Out: <span class="out-val" id="and-out-val" style="color:var(--text-dim)">0</span>
+      </div>
+    </div>
+
+    <div class="weights-wrap">
+      <div class="wrow"><span class="wlbl">w_A</span><div class="wbar-wrap"><div class="wbar" id="and-bar-wa"></div></div><span class="wnum" id="and-wa">0.000</span></div>
+      <div class="wrow"><span class="wlbl">w_B</span><div class="wbar-wrap"><div class="wbar" id="and-bar-wb"></div></div><span class="wnum" id="and-wb">0.000</span></div>
+      <div class="wrow"><span class="wlbl">bias</span><div class="wbar-wrap"><div class="wbar" id="and-bar-b"></div></div><span class="wnum" id="and-b">0.000</span></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn primary" id="and-train-btn" onclick="toggleAndTrain()">▶ Train</button>
+      <button class="btn" onclick="resetAND()">↺ Reset</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat-pill"><div class="sv" id="and-epoch">0</div><div class="sk">Epoch</div></div>
+      <div class="stat-pill"><div class="sv" id="and-acc" style="color:var(--green)">—</div><div class="sk">Accuracy</div></div>
+      <div class="stat-pill"><div class="sv" id="and-status" style="color:var(--text-dim);font-size:0.8rem">—</div><div class="sk">Status</div></div>
+    </div>
+  </div>
+
+  <!-- Truth table + plot -->
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div class="card card-violet">
+      <table class="tt" id="and-tt">
+        <thead><tr><th>A</th><th>B</th><th>Expected</th><th>Predicted</th></tr></thead>
+        <tbody>
+          <tr id="and-row-0"><td class="val0">0</td><td class="val0">0</td><td class="val0">0</td><td id="and-p0">—</td></tr>
+          <tr id="and-row-1"><td class="val0">0</td><td class="val1">1</td><td class="val0">0</td><td id="and-p1">—</td></tr>
+          <tr id="and-row-2"><td class="val1">1</td><td class="val0">0</td><td class="val0">0</td><td id="and-p2">—</td></tr>
+          <tr id="and-row-3"><td class="val1">1</td><td class="val1">1</td><td class="val1">1</td><td id="and-p3">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card card-violet" style="padding:14px;">
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Decision Boundary</div>
+      <canvas id="and-plot" class="plot" height="200"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     XOR: Why it fails
+══════════════════════════════════════ -->
+<div class="sec-title">
+  XOR Problem <span class="badge badge-fail">Not Linearly Separable</span>
+</div>
+
+<div class="explain-box">
+  <h3>Why a single perceptron cannot solve XOR</h3>
+  <p>A perceptron draws a <strong>single straight line</strong> to separate two classes. XOR produces a "checkerboard" pattern — class <code>1</code> at <code>(0,1)</code> and <code>(1,0)</code>, class <code>0</code> at <code>(0,0)</code> and <code>(1,1)</code>. No single line can correctly separate these four points.</p>
+  <p>This was first proved by Minsky &amp; Papert in 1969, and it motivated the development of multi-layer networks.</p>
+  <div class="plot-mini-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div>
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--coral);margin-bottom:6px;">AND — separable ✓</div>
+      <canvas id="and-sep-plot" class="plot" height="160"></canvas>
+    </div>
+    <div>
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--coral);margin-bottom:6px;">XOR — not separable ✗</div>
+      <canvas id="xor-sep-plot" class="plot" height="160"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     XOR: MLP Solution
+══════════════════════════════════════ -->
+<div class="sec-title">
+  XOR Solution <span class="badge badge-xor">2-Layer MLP</span>
+</div>
+
+<div class="arch-note">
+  Architecture:
+  <span class="arch-pill inp">2 Inputs</span>
+  <span class="arch-arrow">→</span>
+  <span class="arch-pill hid">2 Hidden (sigmoid)</span>
+  <span class="arch-arrow">→</span>
+  <span class="arch-pill out">1 Output (sigmoid)</span>
+</div>
+
+<div class="two-col" style="margin-bottom:32px;">
+
+  <!-- Network -->
+  <div class="card card-teal">
+    <div class="net-wrap">
+      <canvas id="xor-net" class="net" height="260"></canvas>
+    </div>
+
+    <div class="input-row">
+      <span class="inp-label">A</span>
+      <div class="toggle-group">
+        <button class="tog active-0" id="xor-a-0" onclick="xorSetA(0)">0</button>
+        <button class="tog" id="xor-a-1" onclick="xorSetA(1)">1</button>
+      </div>
+      <span class="inp-label">B</span>
+      <div class="toggle-group">
+        <button class="tog active-0" id="xor-b-0" onclick="xorSetB(0)">0</button>
+        <button class="tog" id="xor-b-1" onclick="xorSetB(1)">1</button>
+      </div>
+      <span class="inp-arrow">→</span>
+      <div class="output-box">
+        Out: <span class="out-val" id="xor-out-val" style="color:var(--text-dim)">?</span>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;letter-spacing:0.5px;">Hidden activations</div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <div class="output-box" style="flex:1;justify-content:center;">
+        H1: <span id="xor-h1-val" style="font-weight:700;color:var(--violet);margin-left:6px;">?</span>
+      </div>
+      <div class="output-box" style="flex:1;justify-content:center;">
+        H2: <span id="xor-h2-val" style="font-weight:700;color:var(--violet);margin-left:6px;">?</span>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn teal" id="xor-train-btn" onclick="toggleXorTrain()">▶ Train MLP</button>
+      <button class="btn" onclick="resetXOR()">↺ Reset</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat-pill"><div class="sv" id="xor-epoch">0</div><div class="sk">Epoch</div></div>
+      <div class="stat-pill"><div class="sv" id="xor-loss" style="color:var(--coral)">—</div><div class="sk">Loss</div></div>
+      <div class="stat-pill"><div class="sv" id="xor-acc" style="color:var(--green)">—</div><div class="sk">Accuracy</div></div>
+      <div class="stat-pill"><div class="sv" id="xor-status" style="color:var(--text-dim);font-size:0.8rem">—</div><div class="sk">Status</div></div>
+    </div>
+  </div>
+
+  <!-- Truth table + plot -->
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div class="card card-teal">
+      <table class="tt" id="xor-tt">
+        <thead><tr><th>A</th><th>B</th><th>Expected</th><th>Predicted</th></tr></thead>
+        <tbody>
+          <tr id="xor-row-0"><td class="val0">0</td><td class="val0">0</td><td class="val0">0</td><td id="xor-p0">—</td></tr>
+          <tr id="xor-row-1"><td class="val0">0</td><td class="val1">1</td><td class="val1">1</td><td id="xor-p1">—</td></tr>
+          <tr id="xor-row-2"><td class="val1">1</td><td class="val0">0</td><td class="val1">1</td><td id="xor-p2">—</td></tr>
+          <tr id="xor-row-3"><td class="val1">1</td><td class="val1">1</td><td class="val0">0</td><td id="xor-p3">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card card-teal" style="padding:14px;">
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Decision Boundary (MLP)</div>
+      <canvas id="xor-plot" class="plot" height="200"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Formula strip -->
+<div class="formula-strip">
+  <div class="fcard f1">
+    <h4>Perceptron Rule</h4>
+    <code>w ← w + η·(y−ŷ)·x</code>
+    <p>Works for AND — any linearly separable problem is guaranteed to converge.</p>
+  </div>
+  <div class="fcard f2">
+    <h4>MLP Forward Pass</h4>
+    <code>h = σ(W₁x + b₁)<br>ŷ = σ(W₂h + b₂)</code>
+    <p>The hidden layer maps inputs to a new space where XOR becomes linearly separable.</p>
+  </div>
+  <div class="fcard f3">
+    <h4>Backpropagation</h4>
+    <code>δ = ∂L/∂z<br>W ← W − η·δ·xᵀ</code>
+    <p>Chain rule applied layer by layer, propagating the error gradient back through the network.</p>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════════
+//  Utilities
+// ═══════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const dpr = () => window.devicePixelRatio || 1;
+
+function rand(){ return (Math.random()*2-1)*0.8; }
+function sigmoid(z){ return 1/(1+Math.exp(-z)); }
+function sigmoidD(z){ const s=sigmoid(z); return s*(1-s); }
+
+function hex2rgb(h){
+  const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);
+  return [r,g,b];
+}
+
+// Resize canvas for HiDPI
+function setupCanvas(cvs){
+  const rect=cvs.getBoundingClientRect();
+  const d=dpr();
+  cvs.width=rect.width*d;
+  cvs.height=parseFloat(cvs.getAttribute('height'))*d;
+  const ctx=cvs.getContext('2d');
+  ctx.scale(d,d);
+  return ctx;
+}
+function cw(cvs){ return cvs.getBoundingClientRect().width; }
+function ch(cvs){ return parseFloat(cvs.getAttribute('height')); }
+
+// ═══════════════════════════════════════════
+//  AND — Perceptron
+// ═══════════════════════════════════════════
+let andW=[0,0], andB=0, andEpoch=0;
+let andA=0, andB_in=0;
+let andTraining=false, andTimer=null;
+const andData=[[0,0,0],[0,1,0],[1,0,0],[1,1,1]];
+const andLR=0.2;
+
+function andPredict(a,b){ return (andW[0]*a+andW[1]*b+andB)>=0?1:0; }
+
+function trainANDStep(){
+  const [a,b,y]=andData[andEpoch%4];
+  const yhat=andPredict(a,b);
+  const err=y-yhat;
+  andW[0]+=andLR*err*a;
+  andW[1]+=andLR*err*b;
+  andB   +=andLR*err;
+  andEpoch++;
+  if(andEpoch%4===0){
+    let errs=0;
+    andData.forEach(([a,b,y])=>{ if(andPredict(a,b)!==y) errs++; });
+    if(errs===0){ stopAndTrain(); $('and-status').textContent='✓'; $('and-status').style.color='var(--green)'; }
+  }
+  updateANDUI();
+}
+
+function toggleAndTrain(){
+  if(andTraining){ stopAndTrain(); }
+  else{ andTraining=true; $('and-train-btn').textContent='⏹ Stop'; $('and-train-btn').classList.add('pulsing'); andTimer=setInterval(()=>{ for(let i=0;i<4;i++) trainANDStep(); },80); }
+}
+function stopAndTrain(){ andTraining=false; clearInterval(andTimer); $('and-train-btn').textContent='▶ Train'; $('and-train-btn').classList.remove('pulsing'); }
+
+function resetAND(){
+  stopAndTrain();
+  andW=[0,0]; andB=0; andEpoch=0;
+  $('and-status').textContent='—'; $('and-status').style.color='var(--text-dim)';
+  updateANDUI();
+}
+
+function andSetA(v){ andA=v; ['and-a-0','and-a-1'].forEach((id,i)=>{ $(id).className='tog'+(v===i?' active-'+i:''); }); updateANDUI(); }
+function andSetB(v){ andB_in=v; ['and-b-0','and-b-1'].forEach((id,i)=>{ $(id).className='tog'+(v===i?' active-'+i:''); }); updateANDUI(); }
+
+function updateANDUI(){
+  const out=andPredict(andA,andB_in);
+  const outEl=$('and-out-val');
+  outEl.textContent=out;
+  outEl.style.color=out?'var(--violet)':'var(--text-dim)';
+
+  // Epoch
+  $('and-epoch').textContent=Math.floor(andEpoch/4);
+
+  // Accuracy
+  let correct=0;
+  andData.forEach(([a,b,y])=>{ if(andPredict(a,b)===y) correct++; });
+  $('and-acc').textContent=Math.round(correct/4*100)+'%';
+  $('and-acc').style.color=correct===4?'var(--green)':'var(--coral)';
+
+  // Truth table
+  andData.forEach(([a,b,y],i)=>{
+    const pred=andPredict(a,b);
+    const cell=$('and-p'+i);
+    const ok=pred===y;
+    cell.textContent=pred;
+    cell.className=ok?'pred-correct':'pred-wrong';
+    $('and-row-'+i).className=(a===andA&&b===andB_in)?'active':'';
+  });
+
+  // Weight bars
+  updateBar('and-bar-wa','and-wa',andW[0]);
+  updateBar('and-bar-wb','and-wb',andW[1]);
+  updateBar('and-bar-b','and-b',andB);
+
+  drawANDNetwork();
+  drawANDPlot();
+}
+
+function updateBar(barId,numId,v){
+  const bar=$(barId), num=$(numId);
+  const norm=Math.max(0,Math.min(1,(v+2)/4));
+  const ctr=50;
+  if(v>=0){
+    bar.style.left=ctr+'%';
+    bar.style.width=(norm*100-ctr)+'%';
+    bar.style.background='var(--teal)';
+  } else {
+    bar.style.left=(norm*100)+'%';
+    bar.style.width=(ctr-norm*100)+'%';
+    bar.style.background='var(--coral)';
+  }
+  num.textContent=v.toFixed(3);
+  num.style.color=v>=0?'var(--teal)':'var(--coral)';
+}
+
+// ─── Draw AND network ───
+function drawANDNetwork(){
+  const cvs=$('and-net');
+  const ctx=setupCanvas(cvs);
+  const W=cw(cvs), H=ch(cvs);
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0d0b14'; ctx.fillRect(0,0,W,H);
+
+  const iA=andA, iB=andB_in, iBI=1;
+  const activations=[iA, iB, iBI];
+  const out=andPredict(iA,iB);
+
+  // Positions
+  const x0=W*0.18, x1=W*0.82;
+  const ys=[H*0.22, H*0.5, H*0.78];
+  const yOut=H*0.5;
+
+  // Draw connections
+  activations.forEach((act,i)=>{
+    const w=[andW[0],andW[1],andB][i];
+    const posCol='rgba(79,209,197,'; const negCol='rgba(252,129,129,';
+    const alpha=Math.min(1,0.2+Math.abs(w)*0.4);
+    const lw=Math.max(0.5,Math.min(3,Math.abs(w)*1.5));
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x0,ys[i]);
+    ctx.lineTo(x1,yOut);
+    const baseAlpha=(act>0)?alpha*0.9:alpha*0.3;
+    ctx.strokeStyle=(w>=0?(posCol+baseAlpha+')'):(negCol+baseAlpha+')'));
+    ctx.lineWidth=lw;
+    ctx.stroke();
+
+    // Weight label
+    const mx=(x0+x1)/2+(i-1)*18, my=(ys[i]+yOut)/2+(i-1)*2;
+    ctx.font=`10px 'Courier Prime', monospace`;
+    ctx.fillStyle=w>=0?'rgba(79,209,197,0.7)':'rgba(252,129,129,0.7)';
+    ctx.textAlign='center';
+    ctx.fillText(w.toFixed(2),mx,my-4);
+    ctx.restore();
+  });
+
+  // Input nodes
+  const labels=['A','B','1'];
+  activations.forEach((act,i)=>{
+    drawNeuron(ctx,x0,ys[i],22,act,[labels[i]]);
+  });
+  // Bias label special
+  ctx.font=`9px 'Courier Prime', monospace`;
+  ctx.fillStyle='rgba(183,148,244,0.5)';
+  ctx.textAlign='center';
+  ctx.fillText('bias',x0,ys[2]+36);
+
+  // Output node
+  drawNeuron(ctx,x1,yOut,26,out,['OUT',out.toString()]);
+
+  // Input labels on left
+  ctx.textAlign='right';
+  ctx.font=`11px 'Courier Prime', monospace`;
+  ctx.fillStyle='var(--text-dim)';
+  ['A='+iA,'B='+iB,'b=1'].forEach((lbl,i)=>{
+    ctx.fillStyle=(i<2&&activations[i])?'rgba(183,148,244,0.8)':'rgba(107,95,160,0.6)';
+    ctx.fillText(lbl,x0-32,ys[i]+4);
+  });
+
+  // Step function visualization (mini)
+  drawStepFn(ctx,W*0.5,H*0.85,60,22);
+}
+
+function drawNeuron(ctx,x,y,r,activation,labels){
+  const a=activation;
+  // Glow
+  if(a>0){
+    ctx.save();
+    const grad=ctx.createRadialGradient(x,y,r*0.5,x,y,r*2.5);
+    grad.addColorStop(0,'rgba(183,148,244,0.25)');
+    grad.addColorStop(1,'rgba(183,148,244,0)');
+    ctx.fillStyle=grad;
+    ctx.beginPath(); ctx.arc(x,y,r*2.5,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fillStyle=a>0?'rgba(183,148,244,0.25)':'rgba(42,32,64,0.8)';
+  ctx.fill();
+  ctx.strokeStyle=a>0?'rgba(183,148,244,0.9)':'rgba(61,48,96,0.8)';
+  ctx.lineWidth=a>0?2:1.5;
+  ctx.stroke();
+  ctx.fillStyle=a>0?'#e2d9f3':'rgba(107,95,160,0.8)';
+  ctx.font=`bold 12px 'Courier Prime', monospace`;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(labels[0],x,labels.length>1?y-5:y);
+  if(labels.length>1){
+    ctx.font=`10px 'Courier Prime', monospace`;
+    ctx.fillStyle=a?'rgba(183,148,244,0.9)':'rgba(107,95,160,0.5)';
+    ctx.fillText(labels[1],x,y+7);
+  }
+  ctx.textBaseline='alphabetic';
+}
+
+function drawStepFn(ctx,cx,cy,W,H){
+  ctx.save();
+  ctx.strokeStyle='rgba(107,95,160,0.4)';
+  ctx.lineWidth=1;
+  // axes
+  ctx.beginPath(); ctx.moveTo(cx-W/2,cy); ctx.lineTo(cx+W/2,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,cy-H/2-4); ctx.lineTo(cx,cy+H/2+4); ctx.stroke();
+  // step function
+  ctx.strokeStyle='rgba(183,148,244,0.6)';
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(cx-W/2,cy+H/2);
+  ctx.lineTo(cx,cy+H/2);
+  ctx.lineTo(cx,cy-H/2);
+  ctx.lineTo(cx+W/2,cy-H/2);
+  ctx.stroke();
+  ctx.fillStyle='rgba(107,95,160,0.5)';
+  ctx.font=`9px 'Courier Prime', monospace`;
+  ctx.textAlign='center';
+  ctx.fillText('step f(z)',cx,cy+H/2+14);
+  ctx.restore();
+}
+
+// ─── Draw AND decision plot ───
+function drawANDPlot(){
+  const cvs=$('and-plot');
+  const ctx=setupCanvas(cvs);
+  const W=cw(cvs), H=ch(cvs);
+  drawDecisionPlot(ctx,W,H,(x,y)=>andPredict(x,y),andData,'AND');
+}
+
+// ═══════════════════════════════════════════
+//  XOR — MLP
+// ═══════════════════════════════════════════
+let xW1=[[0,0],[0,0]], xB1=[0,0], xW2=[0,0], xB2=0;
+let xorEpoch=0, xorA=0, xorB_in=0;
+let xorTraining=false, xorTimer=null;
+const xorData=[[0,0,0],[0,1,1],[1,0,1],[1,1,0]];
+const xorLR=0.5;
+
+function initXOR(){
+  xW1=[[rand(),rand()],[rand(),rand()]];
+  xB1=[rand()*0.1,rand()*0.1];
+  xW2=[rand(),rand()];
+  xB2=rand()*0.1;
+  xorEpoch=0;
+}
+
+function xorForward(a,b){
+  const z1=[
+    xW1[0][0]*a+xW1[0][1]*b+xB1[0],
+    xW1[1][0]*a+xW1[1][1]*b+xB1[1]
+  ];
+  const h=[sigmoid(z1[0]),sigmoid(z1[1])];
+  const z2=xW2[0]*h[0]+xW2[1]*h[1]+xB2;
+  const out=sigmoid(z2);
+  return {z1,h,z2,out};
+}
+
+function xorPredict(a,b){ return xorForward(a,b).out>=0.5?1:0; }
+function xorRaw(a,b){ return xorForward(a,b).out; }
+
+function trainXORStep(){
+  for(let i=0;i<xorData.length;i++){
+    const [a,b,y]=xorData[(xorEpoch*xorData.length+i)%xorData.length];
+    const {z1,h,z2,out}=xorForward(a,b);
+    // Output delta
+    const dOut=out-y;
+    const d2=dOut*sigmoidD(z2);
+    // Gradients for W2
+    const dW2_0=d2*h[0], dW2_1=d2*h[1];
+    const dB2=d2;
+    // Backprop into hidden
+    const d1_0=d2*xW2[0]*sigmoidD(z1[0]);
+    const d1_1=d2*xW2[1]*sigmoidD(z1[1]);
+    // Update
+    xW2[0]-=xorLR*dW2_0; xW2[1]-=xorLR*dW2_1; xB2-=xorLR*dB2;
+    xW1[0][0]-=xorLR*d1_0*a; xW1[0][1]-=xorLR*d1_0*b; xB1[0]-=xorLR*d1_0;
+    xW1[1][0]-=xorLR*d1_1*a; xW1[1][1]-=xorLR*d1_1*b; xB1[1]-=xorLR*d1_1;
+  }
+  xorEpoch++;
+  let correct=0;
+  xorData.forEach(([a,b,y])=>{ if(xorPredict(a,b)===y) correct++; });
+  if(correct===4 && xorEpoch>10){ stopXorTrain(); $('xor-status').textContent='✓'; $('xor-status').style.color='var(--green)'; }
+}
+
+function toggleXorTrain(){
+  if(xorTraining){ stopXorTrain(); }
+  else{
+    xorTraining=true;
+    $('xor-train-btn').textContent='⏹ Stop';
+    $('xor-train-btn').classList.add('pulsing');
+    xorTimer=setInterval(()=>{
+      for(let i=0;i<20;i++) trainXORStep();
+      updateXORUI();
+    },80);
+  }
+}
+function stopXorTrain(){ xorTraining=false; clearInterval(xorTimer); $('xor-train-btn').textContent='▶ Train MLP'; $('xor-train-btn').classList.remove('pulsing'); updateXORUI(); }
+
+function resetXOR(){
+  stopXorTrain(); initXOR();
+  $('xor-status').textContent='—'; $('xor-status').style.color='var(--text-dim)';
+  updateXORUI();
+}
+
+function xorSetA(v){ xorA=v; ['xor-a-0','xor-a-1'].forEach((id,i)=>{ $(id).className='tog'+(v===i?' active-'+i:''); }); updateXORUI(); }
+function xorSetB(v){ xorB_in=v; ['xor-b-0','xor-b-1'].forEach((id,i)=>{ $(id).className='tog'+(v===i?' active-'+i:''); }); updateXORUI(); }
+
+function updateXORUI(){
+  const {h,out}=xorForward(xorA,xorB_in);
+  const pred=out>=0.5?1:0;
+
+  $('xor-out-val').textContent=pred;
+  $('xor-out-val').style.color=pred?'var(--teal)':'var(--text-dim)';
+  $('xor-h1-val').textContent=h[0].toFixed(3);
+  $('xor-h2-val').textContent=h[1].toFixed(3);
+
+  $('xor-epoch').textContent=xorEpoch;
+
+  // Loss (MSE)
+  let loss=0;
+  xorData.forEach(([a,b,y])=>{ const d=xorRaw(a,b)-y; loss+=d*d; });
+  $('xor-loss').textContent=(loss/4).toFixed(4);
+  $('xor-loss').style.color=loss/4<0.05?'var(--green)':'var(--coral)';
+
+  // Accuracy
+  let correct=0;
+  xorData.forEach(([a,b,y])=>{ if(xorPredict(a,b)===y) correct++; });
+  $('xor-acc').textContent=Math.round(correct/4*100)+'%';
+  $('xor-acc').style.color=correct===4?'var(--green)':'var(--coral)';
+
+  // Truth table
+  xorData.forEach(([a,b,y],i)=>{
+    const p=xorPredict(a,b);
+    const cell=$('xor-p'+i);
+    cell.textContent=p;
+    cell.className=p===y?'pred-correct':'pred-wrong';
+    $('xor-row-'+i).className=(a===xorA&&b===xorB_in)?'active':'';
+  });
+
+  drawXORNetwork();
+  drawXORPlot();
+}
+
+// ─── Draw XOR MLP network ───
+function drawXORNetwork(){
+  const cvs=$('xor-net');
+  const ctx=setupCanvas(cvs);
+  const W=cw(cvs), H=ch(cvs);
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0d0b14'; ctx.fillRect(0,0,W,H);
+
+  const {z1,h,z2,out}=xorForward(xorA,xorB_in);
+
+  // Layer x positions
+  const x0=W*0.15, x1=W*0.5, x2=W*0.85;
+  // Input y positions
+  const ysIn=[H*0.3, H*0.7];
+  // Hidden y positions
+  const ysH=[H*0.25, H*0.75];
+  // Bias y
+  const yBias=H*0.92;
+  // Output y
+  const yOut=H*0.5;
+
+  const r=20;
+
+  // ─ Connections input → hidden ─
+  ysIn.forEach((yi,ii)=>{
+    ysH.forEach((yh,hi)=>{
+      const w=xW1[hi][ii];
+      drawConn(ctx,x0,yi,x1,yh,w,[xorA,xorB_in][ii]);
+    });
+  });
+  // ─ Bias → hidden ─
+  ysH.forEach((yh,hi)=>{
+    drawConn(ctx,x0+(x1-x0)*0.3,yBias,x1,yh,xB1[hi],0.6,true);
+  });
+  // ─ Connections hidden → output ─
+  ysH.forEach((yh,hi)=>{
+    const w=xW2[hi];
+    drawConn(ctx,x1,yh,x2,yOut,w,h[hi]);
+  });
+  // ─ Bias → output ─
+  drawConn(ctx,x1+(x2-x1)*0.3,yBias,x2,yOut,xB2,0.6,true);
+
+  // Input neurons
+  ysIn.forEach((y,i)=>{ drawNeuronTeal(ctx,x0,y,r,[xorA,xorB_in][i],['A','B'][i]); });
+  // Bias "neuron"
+  drawNeuronBias(ctx,x0+(x1-x0)*0.3,yBias,14);
+
+  // Hidden neurons
+  ysH.forEach((y,i)=>{ drawNeuronTeal(ctx,x1,y,r,h[i],'H'+(i+1),h[i].toFixed(2)); });
+
+  // Output neuron
+  drawNeuronOut(ctx,x2,yOut,r+4,out,xorPredict(xorA,xorB_in));
+
+  // Layer labels
+  ctx.font=`9px 'Courier Prime', monospace`;
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(107,95,160,0.5)';
+  ctx.fillText('INPUT',x0,H*0.05);
+  ctx.fillStyle='rgba(183,148,244,0.5)';
+  ctx.fillText('HIDDEN',x1,H*0.05);
+  ctx.fillStyle='rgba(246,201,14,0.5)';
+  ctx.fillText('OUTPUT',x2,H*0.05);
+
+  // Sigmoid plot
+  drawSigmoidFn(ctx,W*0.5,H*0.93,50,14);
+}
+
+function drawConn(ctx,x0,y0,x1,y1,w,act,isDash=false){
+  const alpha=Math.min(1,0.15+Math.abs(w)*0.4)*((act>0.3)?1:0.35);
+  const lw=Math.max(0.5,Math.min(3,Math.abs(w)*1.5));
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1);
+  ctx.strokeStyle=w>=0?`rgba(79,209,197,${alpha})`:`rgba(252,129,129,${alpha})`;
+  ctx.lineWidth=lw;
+  if(isDash) ctx.setLineDash([3,3]);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawNeuronTeal(ctx,x,y,r,act,lbl,sub){
+  if(act>0.2){
+    const grad=ctx.createRadialGradient(x,y,r*0.3,x,y,r*2.5);
+    grad.addColorStop(0,`rgba(79,209,197,${act*0.3})`);
+    grad.addColorStop(1,'rgba(79,209,197,0)');
+    ctx.beginPath(); ctx.arc(x,y,r*2.5,0,Math.PI*2);
+    ctx.fillStyle=grad; ctx.fill();
+  }
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fillStyle=act>0.5?'rgba(79,209,197,0.25)':'rgba(19,17,29,0.9)';
+  ctx.fill();
+  ctx.strokeStyle=act>0.3?`rgba(79,209,197,${0.5+act*0.5})`:'rgba(61,48,96,0.6)';
+  ctx.lineWidth=act>0.5?2:1.5; ctx.stroke();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle=act>0.3?'#e2d9f3':'rgba(107,95,160,0.7)';
+  ctx.font=`bold 11px 'Courier Prime', monospace`;
+  ctx.fillText(lbl,x,sub!==undefined?y-5:y);
+  if(sub!==undefined){
+    ctx.font=`9px 'Courier Prime', monospace`;
+    ctx.fillStyle=act>0.3?'rgba(79,209,197,0.9)':'rgba(107,95,160,0.4)';
+    ctx.fillText(sub,x,y+7);
+  }
+  ctx.textBaseline='alphabetic';
+}
+
+function drawNeuronBias(ctx,x,y,r){
+  ctx.save();
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fillStyle='rgba(183,148,244,0.1)';
+  ctx.fill();
+  ctx.setLineDash([3,2]);
+  ctx.strokeStyle='rgba(183,148,244,0.4)';
+  ctx.lineWidth=1; ctx.stroke();
+  ctx.fillStyle='rgba(183,148,244,0.6)';
+  ctx.font=`9px 'Courier Prime', monospace`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('b',x,y);
+  ctx.textBaseline='alphabetic';
+  ctx.restore();
+}
+
+function drawNeuronOut(ctx,x,y,r,act,pred){
+  const col=pred?'rgba(246,201,14,':'rgba(61,48,96,';
+  if(act>0.3){
+    const grad=ctx.createRadialGradient(x,y,r*0.3,x,y,r*3);
+    grad.addColorStop(0,`rgba(246,201,14,${act*0.3})`);
+    grad.addColorStop(1,'rgba(246,201,14,0)');
+    ctx.beginPath(); ctx.arc(x,y,r*3,0,Math.PI*2);
+    ctx.fillStyle=grad; ctx.fill();
+  }
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fillStyle=pred?'rgba(246,201,14,0.2)':'rgba(19,17,29,0.9)'; ctx.fill();
+  ctx.strokeStyle=pred?'rgba(246,201,14,0.9)':'rgba(61,48,96,0.6)';
+  ctx.lineWidth=pred?2.5:1.5; ctx.stroke();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle=pred?'#f6c90e':'rgba(107,95,160,0.6)';
+  ctx.font=`bold 12px 'Courier Prime', monospace`;
+  ctx.fillText('OUT',x,y-6);
+  ctx.font=`10px 'Courier Prime', monospace`;
+  ctx.fillStyle=pred?'rgba(246,201,14,0.9)':'rgba(107,95,160,0.5)';
+  ctx.fillText(act.toFixed(2),x,y+7);
+  ctx.textBaseline='alphabetic';
+}
+
+function drawSigmoidFn(ctx,cx,cy,W,H){
+  ctx.save();
+  ctx.strokeStyle='rgba(107,95,160,0.3)';
+  ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(cx-W/2,cy); ctx.lineTo(cx+W/2,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,cy-H-4); ctx.lineTo(cx,cy+4); ctx.stroke();
+  ctx.strokeStyle='rgba(79,209,197,0.6)';
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  for(let i=0;i<=40;i++){
+    const t=(i/40)*W-W/2;
+    const z=t/(W/8);
+    const s=sigmoid(z);
+    const px=cx+t, py=cy-s*H;
+    i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+  ctx.fillStyle='rgba(107,95,160,0.5)';
+  ctx.font=`9px 'Courier Prime', monospace`;
+  ctx.textAlign='center';
+  ctx.fillText('σ(z)',cx,cy+13);
+  ctx.restore();
+}
+
+// ─── Decision plots ───
+function drawDecisionPlot(ctx,W,H,predictFn,data,label){
+  const PAD=24;
+  const pw=W-PAD*2, ph=H-PAD*2;
+
+  // Shading
+  const step=2;
+  for(let px=0;px<pw;px+=step){
+    for(let py=0;py<ph;py+=step){
+      const x=px/pw, y=1-py/ph;
+      const p=typeof predictFn(x,y)==='number'? predictFn(x,y) : (predictFn(x,y)>=0.5?1:0);
+      ctx.fillStyle=p?'rgba(183,148,244,0.12)':'rgba(79,209,197,0.09)';
+      ctx.fillRect(PAD+px,PAD+py,step+1,step+1);
+    }
+  }
+
+  // Grid
+  ctx.strokeStyle='rgba(42,32,64,0.4)'; ctx.lineWidth=1;
+  [0,0.5,1].forEach(v=>{
+    const px=PAD+v*pw, py=PAD+v*ph;
+    ctx.beginPath(); ctx.moveTo(px,PAD); ctx.lineTo(px,PAD+ph); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(PAD,py); ctx.lineTo(PAD+pw,py); ctx.stroke();
+  });
+
+  // Axes
+  ctx.strokeStyle='rgba(107,95,160,0.5)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(PAD,PAD); ctx.lineTo(PAD,PAD+ph); ctx.lineTo(PAD+pw,PAD+ph); ctx.stroke();
+
+  // Axis labels
+  ctx.font=`9px 'Courier Prime', monospace`; ctx.textAlign='center';
+  ctx.fillStyle='rgba(107,95,160,0.6)';
+  ctx.fillText('A →',PAD+pw*0.75,PAD+ph+16);
+  ctx.save(); ctx.translate(10,PAD+ph*0.5); ctx.rotate(-Math.PI/2);
+  ctx.fillText('B ↑',0,0); ctx.restore();
+
+  // Decision boundary line (for AND perceptron)
+  if(label==='AND' && (Math.abs(andW[0])>0.01||Math.abs(andW[1])>0.01)){
+    // w0*x + w1*y + b = 0
+    ctx.save(); ctx.strokeStyle='rgba(183,148,244,0.7)'; ctx.lineWidth=1.5;
+    ctx.setLineDash([5,3]);
+    ctx.beginPath();
+    let pts=[];
+    if(Math.abs(andW[1])>0.01){
+      pts.push([0,-(andB)/andW[1]]);
+      pts.push([1,-(andW[0]+andB)/andW[1]]);
+    }
+    if(Math.abs(andW[0])>0.01){
+      pts.push([-(andB)/andW[0],0]);
+      pts.push([-(andW[1]+andB)/andW[0],1]);
+    }
+    pts=pts.filter(([x,y])=>x>=0&&x<=1&&y>=0&&y<=1);
+    if(pts.length>=2){
+      const [px0,py0]=[PAD+pts[0][0]*pw, PAD+(1-pts[0][1])*ph];
+      const [px1,py1]=[PAD+pts[1][0]*pw, PAD+(1-pts[1][1])*ph];
+      ctx.moveTo(px0,py0); ctx.lineTo(px1,py1); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Truth table points
+  data.forEach(([x,y,label])=>{
+    const px=PAD+x*pw, py=PAD+(1-y)*ph;
+    ctx.save();
+    ctx.shadowColor=label?'#b794f4':'#4fd1c5';
+    ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(px,py,7,0,Math.PI*2);
+    ctx.fillStyle=label?'rgba(183,148,244,0.9)':'rgba(79,209,197,0.9)'; ctx.fill();
+    ctx.strokeStyle=label?'#e9d8fd':'#c6f6f5'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.restore();
+    // Coord label
+    ctx.font=`9px 'Courier Prime', monospace`; ctx.textAlign='center';
+    ctx.fillStyle='rgba(226,217,243,0.5)';
+    ctx.fillText(`(${x},${y})`,px,py-13);
+  });
+}
+
+function drawXORPlot(){
+  const cvs=$('xor-plot');
+  const ctx=setupCanvas(cvs);
+  const W=cw(cvs), H=ch(cvs);
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#06050a'; ctx.fillRect(0,0,W,H);
+  drawDecisionPlot(ctx,W,H,(x,y)=>xorRaw(x,y),xorData,'XOR');
+}
+
+function drawANDPlot(){
+  const cvs=$('and-plot');
+  const ctx=setupCanvas(cvs);
+  const W=cw(cvs), H=ch(cvs);
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#06050a'; ctx.fillRect(0,0,W,H);
+  drawDecisionPlot(ctx,W,H,(x,y)=>andPredict(x,y),andData,'AND');
+}
+
+// ─── Separability mini-plots ───
+function drawSepPlot(canvasId, data, hasBoundary){
+  const cvs=$(canvasId);
+  if(!cvs) return;
+  const ctx=setupCanvas(cvs);
+  const W=cw(cvs), H=ch(cvs);
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#06050a'; ctx.fillRect(0,0,W,H);
+  const PAD=20, pw=W-PAD*2, ph=H-PAD*2;
+  // Border
+  ctx.strokeStyle='rgba(42,32,64,0.6)'; ctx.lineWidth=1;
+  ctx.strokeRect(PAD,PAD,pw,ph);
+  // Points
+  data.forEach(([x,y,lbl])=>{
+    const px=PAD+x*pw, py=PAD+(1-y)*ph;
+    ctx.save();
+    ctx.shadowColor=lbl?'#b794f4':'#4fd1c5'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.arc(px,py,8,0,Math.PI*2);
+    ctx.fillStyle=lbl?'rgba(183,148,244,0.85)':'rgba(79,209,197,0.85)'; ctx.fill();
+    ctx.strokeStyle='#e2d9f3'; ctx.lineWidth=1.2; ctx.stroke();
+    ctx.restore();
+    ctx.font=`10px 'Courier Prime', monospace`; ctx.textAlign='center';
+    ctx.fillStyle='rgba(226,217,243,0.6)';
+    ctx.fillText(lbl,px,py+4);
+  });
+  // Separating line for AND
+  if(hasBoundary){
+    ctx.save(); ctx.strokeStyle='rgba(183,148,244,0.7)'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]);
+    ctx.beginPath();
+    ctx.moveTo(PAD+pw*0.1, PAD+ph*0.6);
+    ctx.lineTo(PAD+pw*0.65, PAD+ph*0.1);
+    ctx.stroke(); ctx.restore();
+    ctx.font=`9px 'Courier Prime', monospace`; ctx.textAlign='center';
+    ctx.fillStyle='rgba(183,148,244,0.5)';
+    ctx.fillText('← separable ✓', W/2, H-6);
+  } else {
+    // No line, just an X mark
+    ctx.font=`9px 'Courier Prime', monospace`; ctx.textAlign='center';
+    ctx.fillStyle='rgba(252,129,129,0.6)';
+    ctx.fillText('no line works ✗', W/2, H-6);
+  }
+}
+
+// ═══════════════════════════════════════════
+//  Init
+// ═══════════════════════════════════════════
+window.addEventListener('load', ()=>{
+  initXOR();
+  updateANDUI();
+  updateXORUI();
+  drawSepPlot('and-sep-plot', andData, true);
+  drawSepPlot('xor-sep-plot', xorData, false);
+});
+window.addEventListener('resize', ()=>{
+  updateANDUI();
+  updateXORUI();
+  drawSepPlot('and-sep-plot', andData, true);
+  drawSepPlot('xor-sep-plot', xorData, false);
+});
+</script>
+</body>
+</html>

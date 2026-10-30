@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K-MEANS PLAYGROUND // TRASH POLKA EDITION</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;700&display=swap');
+
+  :root {
+    --black: #0a0a0a;
+    --red: #c41e1e;
+    --red-bright: #ff2222;
+    --white: #f0e8e0;
+    --gray: #2a2a2a;
+    --gray-light: #444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'IBM Plex Mono', monospace;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse at 15% 25%, rgba(196,30,30,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 85% 75%, rgba(196,30,30,0.05) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(255,255,255,0.02) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* === HEADER === */
+  .header {
+    position: relative;
+    padding: 40px 40px 20px;
+    border-bottom: 3px solid var(--red);
+    overflow: hidden;
+  }
+
+  .header::after {
+    content: 'CLUSTER CLUSTER CLUSTER CLUSTER CLUSTER CLUSTER';
+    position: absolute;
+    top: 10px; right: -20px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 120px;
+    color: rgba(196,30,30,0.06);
+    white-space: nowrap;
+    pointer-events: none;
+    transform: rotate(-3deg);
+  }
+
+  .header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 64px;
+    letter-spacing: 6px;
+    line-height: 1;
+    position: relative;
+  }
+
+  .header h1 span.red { color: var(--red); }
+  .header h1 span.strike {
+    text-decoration: line-through;
+    text-decoration-color: var(--red);
+    opacity: 0.4;
+  }
+
+  .header .subtitle {
+    font-family: 'Special Elite', cursive;
+    font-size: 18px;
+    margin-top: 8px;
+    color: #999;
+    letter-spacing: 2px;
+  }
+
+  .header .math-ghost {
+    position: absolute;
+    right: 40px;
+    top: 20px;
+    font-size: 14px;
+    color: rgba(196,30,30,0.25);
+    text-align: right;
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1.6;
+    white-space: pre;
+  }
+
+  /* === LAYOUT === */
+  .container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .panel {
+    padding: 30px;
+    border: 1px solid var(--gray);
+    position: relative;
+  }
+
+  .panel::before {
+    content: attr(data-label);
+    position: absolute;
+    top: -1px; left: 20px;
+    background: var(--black);
+    padding: 0 12px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: var(--red);
+  }
+
+  .full-width { grid-column: 1 / -1; }
+
+  /* === CANVAS === */
+  canvas {
+    background: var(--black);
+    border: 1px solid var(--gray-light);
+    cursor: crosshair;
+    display: block;
+    width: 100%;
+    image-rendering: auto;
+  }
+
+  canvas.main-canvas { aspect-ratio: 6 / 5; }
+  canvas.elbow-canvas { aspect-ratio: 3 / 1; }
+  canvas.explainer-canvas-tall { aspect-ratio: 2 / 1; }
+  canvas.explainer-canvas-short { aspect-ratio: 600 / 220; }
+
+  /* === CONTROLS === */
+  .controls {
+    padding: 30px 40px;
+    border-bottom: 1px solid var(--gray);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .btn {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    padding: 8px 20px;
+    border: 2px solid var(--red);
+    background: transparent;
+    color: var(--white);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn:hover { background: var(--red); color: var(--black); }
+  .btn.active { background: var(--red); color: var(--black); }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .btn:disabled:hover { background: transparent; color: var(--white); }
+
+  .btn-ghost {
+    border-color: var(--gray-light);
+    font-size: 15px;
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--white);
+    background: transparent;
+    color: var(--white);
+  }
+
+  .separator {
+    width: 1px;
+    height: 30px;
+    background: var(--gray-light);
+  }
+
+  label.ctrl-label {
+    font-family: 'Special Elite', cursive;
+    font-size: 14px;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    background: var(--gray);
+    height: 4px;
+    border-radius: 0;
+    outline: none;
+    width: 100px;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--red);
+    border: none;
+    cursor: pointer;
+  }
+
+  /* === INFO BAR === */
+  .info-bar {
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--gray);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+  }
+
+  .info-card {
+    background: rgba(196,30,30,0.05);
+    border-left: 3px solid var(--red);
+    padding: 12px 16px;
+  }
+
+  .info-card .label {
+    font-family: 'Special Elite', cursive;
+    font-size: 11px;
+    color: #777;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .info-card .value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    color: var(--white);
+    margin-top: 2px;
+  }
+
+  .info-card .value.red { color: var(--red-bright); }
+
+  /* === TABS === */
+  .tab-bar {
+    display: flex;
+    border-bottom: 2px solid var(--gray);
+    padding: 0 40px;
+    gap: 0;
+  }
+
+  .tab-btn {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 3px;
+    padding: 14px 28px;
+    background: transparent;
+    color: #666;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .tab-btn:hover { color: var(--white); }
+
+  .tab-btn.active-tab {
+    color: var(--red);
+    border-bottom-color: var(--red);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.visible { display: block; }
+
+  /* === STEPS === */
+  .steps-panel {
+    padding: 30px 40px;
+    border-bottom: 1px solid var(--gray);
+  }
+
+  .steps-panel h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    color: var(--red);
+  }
+
+  .step-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 1.5fr;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    align-items: start;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .step-row:hover { background: rgba(196,30,30,0.05); }
+  .step-row.active-step { background: rgba(196,30,30,0.1); }
+
+  .step-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    color: var(--red);
+    line-height: 1;
+  }
+
+  .step-title {
+    font-family: 'Special Elite', cursive;
+    font-size: 15px;
+    color: var(--white);
+  }
+
+  .step-math {
+    font-size: 13px;
+    color: #888;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .matrix-display {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: #aaa;
+    background: rgba(255,255,255,0.03);
+    padding: 12px;
+    border-left: 2px solid var(--red);
+    margin: 10px 0;
+    overflow-x: auto;
+    white-space: pre;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  /* === ITERATION LOG === */
+  .iteration-log {
+    max-height: 180px;
+    overflow-y: auto;
+    font-size: 12px;
+    color: #888;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 10px 0;
+  }
+
+  .iteration-log .iter-entry {
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    display: flex;
+    gap: 16px;
+  }
+
+  .iteration-log .iter-num {
+    color: var(--red);
+    font-weight: bold;
+    min-width: 50px;
+  }
+
+  /* === SPEED INDICATOR === */
+  .speed-indicator {
+    font-family: 'Special Elite', cursive;
+    font-size: 12px;
+    color: #555;
+  }
+
+  /* === CLICK HINT === */
+  .click-hint {
+    font-family: 'Special Elite', cursive;
+    font-size: 13px;
+    color: #555;
+    text-align: center;
+    padding: 8px;
+  }
+
+  /* === TOOLTIP === */
+  .tooltip {
+    position: absolute;
+    background: var(--gray);
+    border: 1px solid var(--red);
+    padding: 6px 10px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 100;
+    display: none;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* === EXPLAINER === */
+  .explainer {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 30px 40px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .exp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 20px;
+  }
+
+  .exp-card {
+    border: 1px solid var(--gray);
+    padding: 24px;
+  }
+
+  .exp-card h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--red);
+    margin-bottom: 12px;
+  }
+
+  .exp-card p, .exp-card li {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #bbb;
+  }
+
+  .exp-card ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .exp-card ul li::before {
+    content: '//';
+    color: var(--red);
+    margin-right: 8px;
+    font-weight: bold;
+  }
+
+  .exp-card .formula {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    color: var(--red-bright);
+    background: rgba(196,30,30,0.08);
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-left: 3px solid var(--red);
+  }
+
+  .analogy-box {
+    background: rgba(196,30,30,0.05);
+    border: 1px dashed var(--red);
+    padding: 16px 20px;
+    margin-top: 16px;
+  }
+
+  .analogy-box .analogy-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    color: var(--red);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  .analogy-box p {
+    font-size: 13px;
+    color: #999;
+    line-height: 1.6;
+  }
+
+  .exp-demo-controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .exp-demo-controls .btn { font-size: 14px; padding: 6px 14px; }
+
+  .exp-demo-stat {
+    display: inline-block;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: var(--white);
+    margin: 4px 12px 4px 0;
+  }
+
+  .exp-demo-stat .stat-label {
+    font-family: 'Special Elite', cursive;
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: block;
+  }
+
+  .exp-demo-stat .stat-val { color: var(--red-bright); }
+
+  /* === FOOTER === */
+  .footer {
+    padding: 30px 40px;
+    text-align: center;
+    color: #444;
+    font-size: 12px;
+    font-family: 'Special Elite', cursive;
+    border-top: 1px solid var(--gray);
+  }
+
+  .footer span { color: var(--red); }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 900px) {
+    .container { grid-template-columns: 1fr; }
+    .exp-grid { grid-template-columns: 1fr; }
+    .header h1 { font-size: 36px; }
+    .header .math-ghost { display: none; }
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--black); }
+  ::-webkit-scrollbar-thumb { background: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>
+    <span class="strike">UNLABELED</span>
+    <span class="red">K-MEANS</span> PLAYGROUND
+  </h1>
+  <div class="subtitle">// clustering by iterative centroid optimization //</div>
+  <div class="math-ghost">1. init centroids randomly
+2. assign x_i to nearest c_k
+3. c_k = mean(points in cluster k)
+4. repeat until convergence</div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <label class="ctrl-label">
+    K =
+    <input type="range" id="k-slider" min="2" max="8" value="3" oninput="updateK()">
+    <span id="k-val" style="color:var(--red-bright); font-family:'Bebas Neue'; font-size:22px;">3</span>
+  </label>
+
+  <div class="separator"></div>
+
+  <button class="btn btn-ghost" onclick="loadPreset('blobs')">3 BLOBS</button>
+  <button class="btn btn-ghost" onclick="loadPreset('uneven')">UNEVEN</button>
+  <button class="btn btn-ghost" onclick="loadPreset('moons')">MOONS</button>
+  <button class="btn btn-ghost" onclick="loadPreset('ring')">RING</button>
+  <button class="btn btn-ghost" onclick="loadPreset('random')">RANDOM</button>
+
+  <div class="separator"></div>
+
+  <label class="ctrl-label">
+    Points
+    <input type="range" id="npoints-slider" min="30" max="400" value="150" oninput="document.getElementById('npoints-val').textContent=this.value">
+    <span id="npoints-val">150</span>
+  </label>
+
+  <label class="ctrl-label">
+    Speed
+    <input type="range" id="speed-slider" min="1" max="10" value="5">
+  </label>
+
+  <div class="separator"></div>
+
+  <button class="btn" onclick="clearAll()" style="border-color:#661111;">CLEAR</button>
+  <button class="btn" onclick="initKMeans()" id="btn-init">INIT</button>
+  <button class="btn" onclick="stepKMeans()" id="btn-step">STEP</button>
+  <button class="btn" onclick="runKMeans()" id="btn-run">RUN</button>
+  <button class="btn" onclick="resetCentroids()" id="btn-reset" style="border-color:#661111;">RE-INIT</button>
+</div>
+
+<!-- INFO BAR -->
+<div class="info-bar">
+  <div class="info-card">
+    <div class="label">Data Points</div>
+    <div class="value" id="info-points">0</div>
+  </div>
+  <div class="info-card">
+    <div class="label">K (Clusters)</div>
+    <div class="value red" id="info-k">3</div>
+  </div>
+  <div class="info-card">
+    <div class="label">Iteration</div>
+    <div class="value" id="info-iter">0</div>
+  </div>
+  <div class="info-card">
+    <div class="label">Inertia (WCSS)</div>
+    <div class="value red" id="info-inertia">--</div>
+  </div>
+  <div class="info-card">
+    <div class="label">Status</div>
+    <div class="value" id="info-status">READY</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tab-bar">
+  <button class="tab-btn active-tab" onclick="switchTab('kmeans')">K-MEANS PLAYGROUND</button>
+  <button class="tab-btn" onclick="switchTab('explain')">WHAT IS CLUSTERING?</button>
+</div>
+
+<!-- ================================ -->
+<!-- TAB: CLUSTERING EXPLAINER        -->
+<!-- ================================ -->
+<div class="tab-content" id="tab-explain">
+  <div class="explainer">
+    <div class="exp-grid">
+
+      <!-- Top Left: Interactive distance demo -->
+      <div class="exp-card">
+        <h3>// INTERACTIVE: NEAREST CENTROID</h3>
+        <p>Click anywhere to place a point. Watch it get assigned to the <strong style="color:var(--white)">nearest centroid</strong> based on Euclidean distance. The colored regions show the <em style="color:var(--red)">Voronoi boundaries</em> &mdash; every point inside a region is closer to that centroid.</p>
+        <canvas id="canvas-voronoi" class="explainer-canvas-tall" width="600" height="300" style="margin-top:14px;cursor:crosshair;"></canvas>
+        <div class="exp-demo-controls">
+          <button class="btn btn-ghost" onclick="resetVoronoi()">RESET CENTROIDS</button>
+        </div>
+      </div>
+
+      <!-- Top Right: The Concept -->
+      <div class="exp-card">
+        <h3>// THE CONCEPT</h3>
+        <p><strong style="color:var(--white)">K-Means Clustering</strong> partitions data into <strong style="color:var(--red)">K groups</strong> by finding K centroids that minimize the total distance from each point to its nearest centroid.</p>
+        <div class="formula">
+          J = &Sigma;<sub>k=1</sub><sup>K</sup> &Sigma;<sub>x&isin;C<sub>k</sub></sub> ||x - c<sub>k</sub>||&sup2;
+        </div>
+        <ul>
+          <li><strong style="color:var(--white)">K</strong> = number of clusters (chosen in advance)</li>
+          <li><strong style="color:var(--white)">c<sub>k</sub></strong> = centroid (mean) of cluster k</li>
+          <li><strong style="color:var(--white)">J</strong> = inertia (total within-cluster variance)</li>
+          <li><strong style="color:var(--white)">Goal:</strong> minimize J by iterating assign &rarr; update</li>
+        </ul>
+        <div class="analogy-box">
+          <div class="analogy-title">// ANALOGY: PIZZA DELIVERY</div>
+          <p>Imagine placing K pizza shops in a city so that every house is as close as possible to a shop. K-Means finds the best locations for those shops &mdash; the centroids &mdash; by repeatedly adjusting them until each shop sits at the center of its delivery zone.</p>
+        </div>
+      </div>
+
+      <!-- Bottom Left: Why K matters -->
+      <div class="exp-card">
+        <h3>// WHY K MATTERS</h3>
+        <canvas id="canvas-elbow-explain" class="explainer-canvas-short" width="600" height="220" style="margin-bottom:10px;"></canvas>
+        <p>Choosing the right <strong style="color:var(--red)">K</strong> is crucial. Too few clusters = poor fit. Too many = overfitting. The <strong style="color:var(--white)">Elbow Method</strong> plots inertia vs K. Look for the "elbow" where adding more clusters stops helping much.</p>
+        <ul style="margin-top:10px;">
+          <li><strong style="color:var(--white)">K=1</strong>: everything in one group (high inertia)</li>
+          <li><strong style="color:var(--white)">K=N</strong>: each point is its own cluster (zero inertia, useless)</li>
+          <li><strong style="color:var(--white)">Sweet spot:</strong> the bend in the elbow curve</li>
+        </ul>
+      </div>
+
+      <!-- Bottom Right: Initialization sensitivity -->
+      <div class="exp-card">
+        <h3>// INITIALIZATION MATTERS</h3>
+        <canvas id="canvas-init-explain" class="explainer-canvas-short" width="600" height="220" style="margin-bottom:10px;"></canvas>
+        <p>K-Means converges to a <strong style="color:var(--red)">local optimum</strong>, not necessarily the global best. Different random starting positions for centroids can lead to very different clusters!</p>
+        <ul style="margin-top:10px;">
+          <li><strong style="color:var(--white)">Bad init</strong> = centroids stuck in wrong positions</li>
+          <li><strong style="color:var(--white)">Solution:</strong> run multiple times, pick best inertia</li>
+          <li><strong style="color:var(--white)">K-Means++:</strong> smarter initialization (spread centroids apart)</li>
+        </ul>
+        <div class="analogy-box">
+          <div class="analogy-title">// ANALOGY: HIKING</div>
+          <p>K-Means is like walking downhill to find the lowest valley. Where you start determines which valley you end up in. Starting from different peaks might lead to different valleys &mdash; some deeper than others.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================================ -->
+<!-- TAB: K-MEANS PLAYGROUND          -->
+<!-- ================================ -->
+<div class="tab-content visible" id="tab-kmeans">
+
+<div class="container">
+  <div class="panel" data-label="01 // CLUSTERS + CENTROIDS">
+    <canvas id="canvas-main" class="main-canvas" width="600" height="500"></canvas>
+    <div class="click-hint">click to add points // use presets for quick demos</div>
+  </div>
+
+  <div class="panel" data-label="02 // CENTROID TRAILS">
+    <canvas id="canvas-trails" class="main-canvas" width="600" height="500"></canvas>
+    <div class="click-hint">centroid movement across iterations</div>
+  </div>
+
+  <!-- Elbow / Inertia -->
+  <div class="panel full-width" data-label="03 // INERTIA PER ITERATION">
+    <canvas id="canvas-inertia" class="elbow-canvas" width="600" height="200"></canvas>
+  </div>
+</div>
+
+<!-- STEPS -->
+<div class="steps-panel">
+  <h2>// K-MEANS ALGORITHM - STEP BY STEP</h2>
+
+  <div class="step-row" onclick="highlightStep(0)" id="step-0">
+    <div class="step-num">01</div>
+    <div class="step-title">Choose K and initialize centroids</div>
+    <div class="step-math">c_1, c_2, ..., c_K = random points from data</div>
+  </div>
+  <div id="step-detail-0" class="matrix-display" style="display:none;"></div>
+
+  <div class="step-row" onclick="highlightStep(1)" id="step-1">
+    <div class="step-num">02</div>
+    <div class="step-title">Assign each point to nearest centroid</div>
+    <div class="step-math">label_i = argmin_k ||x_i - c_k||^2</div>
+  </div>
+  <div id="step-detail-1" class="matrix-display" style="display:none;"></div>
+
+  <div class="step-row" onclick="highlightStep(2)" id="step-2">
+    <div class="step-num">03</div>
+    <div class="step-title">Update centroids to cluster means</div>
+    <div class="step-math">c_k = (1/|C_k|) * sum(x_i for x_i in C_k)</div>
+  </div>
+  <div id="step-detail-2" class="matrix-display" style="display:none;"></div>
+
+  <div class="step-row" onclick="highlightStep(3)" id="step-3">
+    <div class="step-num">04</div>
+    <div class="step-title">Check convergence</div>
+    <div class="step-math">if centroids unchanged: stop, else: goto step 02</div>
+  </div>
+  <div id="step-detail-3" class="matrix-display" style="display:none;"></div>
+</div>
+
+<!-- Iteration Log -->
+<div class="steps-panel">
+  <h2>// ITERATION LOG</h2>
+  <div class="iteration-log" id="iteration-log">
+    <div style="color:#555;">Run the algorithm to see iteration details...</div>
+  </div>
+</div>
+
+</div><!-- end tab-kmeans -->
+
+<div class="footer">
+  CSDS-352 // DATA SCIENCE & MACHINE LEARNING // WEEK 6 <span>//</span> UNSUPERVISED LEARNING
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ==========================================
+// CLUSTER COLORS
+// ==========================================
+const CLUSTER_COLORS = [
+  '#ff2222', '#2288ff', '#22cc44', '#ffaa00', '#cc44ff',
+  '#ff6688', '#00cccc', '#ff8844'
+];
+
+const CLUSTER_COLORS_DIM = [
+  'rgba(255,34,34,0.25)', 'rgba(34,136,255,0.25)', 'rgba(34,204,68,0.25)',
+  'rgba(255,170,0,0.25)', 'rgba(204,68,255,0.25)', 'rgba(255,102,136,0.25)',
+  'rgba(0,204,204,0.25)', 'rgba(255,136,68,0.25)'
+];
+
+// ==========================================
+// DATA STATE
+// ==========================================
+let points = [];           // [{x, y}]
+let centroids = [];        // [{x, y}] current centroids
+let labels = [];           // cluster assignment per point
+let centroidHistory = [];  // array of centroid snapshots per iteration
+let inertiaHistory = [];   // inertia per iteration
+let iteration = 0;
+let converged = false;
+let animRunning = false;
+let animTimer = null;
+
+// ==========================================
+// CANVAS REFS
+// ==========================================
+const canvasMain = document.getElementById('canvas-main');
+const canvasTrails = document.getElementById('canvas-trails');
+const canvasInertia = document.getElementById('canvas-inertia');
+const ctxM = canvasMain.getContext('2d');
+const ctxT = canvasTrails.getContext('2d');
+const ctxI = canvasInertia.getContext('2d');
+
+// ==========================================
+// CANVAS SETUP (robust HiDPI)
+// ==========================================
+function setupCanvas(canvas) {
+  canvas.style.removeProperty('width');
+  canvas.style.removeProperty('height');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return false;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+  return true;
+}
+
+function initCanvases() {
+  if (!setupCanvas(canvasMain) || !setupCanvas(canvasTrails) || !setupCanvas(canvasInertia)) return;
+  drawAll();
+}
+
+window.addEventListener('resize', () => {
+  if (document.getElementById('tab-kmeans').classList.contains('visible')) initCanvases();
+  else initExplainCanvases();
+});
+setTimeout(initCanvases, 100);
+
+// ==========================================
+// COORDINATE MAPPING
+// ==========================================
+function getDataBounds() {
+  const allPts = [...points, ...centroids];
+  if (allPts.length === 0) return { xMin: -5, xMax: 5, yMin: -5, yMax: 5 };
+  let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+  for (const p of allPts) {
+    if (p.x < xMin) xMin = p.x;
+    if (p.x > xMax) xMax = p.x;
+    if (p.y < yMin) yMin = p.y;
+    if (p.y > yMax) yMax = p.y;
+  }
+  const pad = Math.max(xMax - xMin, yMax - yMin) * 0.15 + 1;
+  return { xMin: xMin - pad, xMax: xMax + pad, yMin: yMin - pad, yMax: yMax + pad };
+}
+
+function dataToCanvas(canvas, x, y, bounds) {
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  const margin = 40;
+  const px = margin + (x - bounds.xMin) / (bounds.xMax - bounds.xMin) * (w - 2 * margin);
+  const py = h - margin - (y - bounds.yMin) / (bounds.yMax - bounds.yMin) * (h - 2 * margin);
+  return [px, py];
+}
+
+function canvasToData(canvas, px, py) {
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  const bounds = getDataBounds();
+  const margin = 40;
+  const x = bounds.xMin + (px - margin) / (w - 2 * margin) * (bounds.xMax - bounds.xMin);
+  const y = bounds.yMin + (h - margin - py) / (h - 2 * margin) * (bounds.yMax - bounds.yMin);
+  return [x, y];
+}
+
+// ==========================================
+// RANDOM UTILS
+// ==========================================
+function randN() {
+  const u1 = Math.random(), u2 = Math.random();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+function dist2(a, b) {
+  return (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
+}
+
+// ==========================================
+// DRAWING
+// ==========================================
+const splattersMain = Array.from({length: 5}, () => ({x: Math.random(), y: Math.random(), r: Math.random() * 40 + 10}));
+const splattersTrails = Array.from({length: 5}, () => ({x: Math.random(), y: Math.random(), r: Math.random() * 40 + 10}));
+
+function drawSplatters(ctx, w, h, splatters) {
+  ctx.fillStyle = 'rgba(196,30,30,0.03)';
+  for (const s of splatters) {
+    ctx.beginPath();
+    ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawGrid(ctx, canvas, bounds) {
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  const range = Math.max(bounds.xMax - bounds.xMin, bounds.yMax - bounds.yMin);
+  const step = Math.pow(10, Math.floor(Math.log10(range)) - 1) * 2;
+  for (let v = Math.ceil(bounds.xMin / step) * step; v <= bounds.xMax; v += step) {
+    const [px] = dataToCanvas(canvas, v, 0, bounds);
+    ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h); ctx.stroke();
+  }
+  for (let v = Math.ceil(bounds.yMin / step) * step; v <= bounds.yMax; v += step) {
+    const [, py] = dataToCanvas(canvas, 0, v, bounds);
+    ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(w, py); ctx.stroke();
+  }
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  const [ox, oy] = dataToCanvas(canvas, 0, 0, bounds);
+  ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(w, oy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, h); ctx.stroke();
+}
+
+function drawMainCanvas() {
+  const rect = canvasMain.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  if (w === 0 || h === 0) return;
+  ctxM.clearRect(0, 0, w, h);
+
+  const bounds = getDataBounds();
+  drawSplatters(ctxM, w, h, splattersMain);
+  drawGrid(ctxM, canvasMain, bounds);
+
+  // Draw Voronoi-ish regions if centroids exist
+  if (centroids.length > 0 && labels.length > 0) {
+    // Draw distance lines from each point to its centroid (faint)
+    ctxM.lineWidth = 1;
+    for (let i = 0; i < points.length; i++) {
+      const ci = labels[i];
+      if (ci === undefined || ci < 0) continue;
+      const [px, py] = dataToCanvas(canvasMain, points[i].x, points[i].y, bounds);
+      const [cx, cy] = dataToCanvas(canvasMain, centroids[ci].x, centroids[ci].y, bounds);
+      ctxM.strokeStyle = CLUSTER_COLORS_DIM[ci % CLUSTER_COLORS_DIM.length];
+      ctxM.beginPath(); ctxM.moveTo(px, py); ctxM.lineTo(cx, cy); ctxM.stroke();
+    }
+  }
+
+  // Draw points
+  for (let i = 0; i < points.length; i++) {
+    const [px, py] = dataToCanvas(canvasMain, points[i].x, points[i].y, bounds);
+    const ci = labels[i];
+    const color = (ci !== undefined && ci >= 0)
+      ? CLUSTER_COLORS[ci % CLUSTER_COLORS.length]
+      : 'rgba(240,232,224,0.5)';
+    ctxM.beginPath();
+    ctxM.arc(px, py, 4, 0, Math.PI * 2);
+    ctxM.fillStyle = color;
+    ctxM.globalAlpha = 0.7;
+    ctxM.fill();
+    ctxM.globalAlpha = 1;
+  }
+
+  // Draw centroids
+  for (let k = 0; k < centroids.length; k++) {
+    const [cx, cy] = dataToCanvas(canvasMain, centroids[k].x, centroids[k].y, bounds);
+    const color = CLUSTER_COLORS[k % CLUSTER_COLORS.length];
+
+    // Outer glow
+    ctxM.beginPath();
+    ctxM.arc(cx, cy, 14, 0, Math.PI * 2);
+    ctxM.fillStyle = color.replace(')', ',0.2)').replace('rgb', 'rgba');
+    ctxM.fill();
+
+    // Cross marker
+    ctxM.strokeStyle = color;
+    ctxM.lineWidth = 3;
+    const s = 8;
+    ctxM.beginPath();
+    ctxM.moveTo(cx - s, cy); ctxM.lineTo(cx + s, cy);
+    ctxM.moveTo(cx, cy - s); ctxM.lineTo(cx, cy + s);
+    ctxM.stroke();
+
+    // Outer ring
+    ctxM.beginPath();
+    ctxM.arc(cx, cy, 10, 0, Math.PI * 2);
+    ctxM.strokeStyle = color;
+    ctxM.lineWidth = 2;
+    ctxM.stroke();
+
+    // Label
+    ctxM.fillStyle = color;
+    ctxM.font = "bold 12px 'IBM Plex Mono'";
+    ctxM.fillText(`C${k + 1}`, cx + 14, cy - 10);
+  }
+}
+
+function drawTrailsCanvas() {
+  const rect = canvasTrails.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  if (w === 0 || h === 0) return;
+  ctxT.clearRect(0, 0, w, h);
+
+  const bounds = getDataBounds();
+  drawSplatters(ctxT, w, h, splattersTrails);
+  drawGrid(ctxT, canvasTrails, bounds);
+
+  // Draw points faintly
+  for (let i = 0; i < points.length; i++) {
+    const [px, py] = dataToCanvas(canvasTrails, points[i].x, points[i].y, bounds);
+    ctxT.beginPath();
+    ctxT.arc(px, py, 2, 0, Math.PI * 2);
+    ctxT.fillStyle = 'rgba(240,232,224,0.15)';
+    ctxT.fill();
+  }
+
+  // Draw centroid trails
+  if (centroidHistory.length < 1) return;
+  const K = centroidHistory[0].length;
+
+  for (let k = 0; k < K; k++) {
+    const color = CLUSTER_COLORS[k % CLUSTER_COLORS.length];
+
+    // Draw path
+    ctxT.strokeStyle = color;
+    ctxT.lineWidth = 2;
+    ctxT.setLineDash([]);
+    ctxT.beginPath();
+    for (let t = 0; t < centroidHistory.length; t++) {
+      const c = centroidHistory[t][k];
+      const [px, py] = dataToCanvas(canvasTrails, c.x, c.y, bounds);
+      if (t === 0) ctxT.moveTo(px, py);
+      else ctxT.lineTo(px, py);
+    }
+    ctxT.stroke();
+
+    // Draw dots at each position
+    for (let t = 0; t < centroidHistory.length; t++) {
+      const c = centroidHistory[t][k];
+      const [px, py] = dataToCanvas(canvasTrails, c.x, c.y, bounds);
+      const isLast = t === centroidHistory.length - 1;
+
+      ctxT.beginPath();
+      ctxT.arc(px, py, isLast ? 7 : 4, 0, Math.PI * 2);
+      ctxT.fillStyle = isLast ? color : color.replace(')', ',0.4)').replace('#', '');
+
+      if (isLast) {
+        ctxT.fillStyle = color;
+        ctxT.fill();
+        ctxT.strokeStyle = '#fff';
+        ctxT.lineWidth = 2;
+        ctxT.stroke();
+      } else {
+        // Faded past positions
+        const alpha = 0.2 + 0.6 * (t / centroidHistory.length);
+        ctxT.globalAlpha = alpha;
+        ctxT.fillStyle = color;
+        ctxT.fill();
+        ctxT.globalAlpha = 1;
+      }
+
+      // Iteration number
+      if (isLast || t === 0) {
+        ctxT.fillStyle = '#888';
+        ctxT.font = "10px 'IBM Plex Mono'";
+        ctxT.fillText(t === 0 ? 'start' : `iter ${t}`, px + 10, py - 6);
+      }
+    }
+  }
+}
+
+function drawInertiaChart() {
+  const rect = canvasInertia.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  if (w === 0 || h === 0) return;
+  ctxI.clearRect(0, 0, w, h);
+
+  if (inertiaHistory.length === 0) {
+    ctxI.fillStyle = '#333';
+    ctxI.font = "14px 'Special Elite'";
+    ctxI.textAlign = 'center';
+    ctxI.fillText('run the algorithm to see inertia converge', w / 2, h / 2);
+    ctxI.textAlign = 'left';
+    return;
+  }
+
+  const margin = { top: 20, right: 30, bottom: 35, left: 70 };
+  const cw = w - margin.left - margin.right;
+  const ch = h - margin.top - margin.bottom;
+
+  const maxInertia = Math.max(...inertiaHistory) * 1.1;
+  const minInertia = 0;
+
+  // Axes
+  ctxI.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctxI.lineWidth = 1;
+  ctxI.beginPath();
+  ctxI.moveTo(margin.left, margin.top);
+  ctxI.lineTo(margin.left, h - margin.bottom);
+  ctxI.lineTo(w - margin.right, h - margin.bottom);
+  ctxI.stroke();
+
+  // Labels
+  ctxI.fillStyle = '#666';
+  ctxI.font = "12px 'Special Elite'";
+  ctxI.textAlign = 'center';
+  ctxI.fillText('Iteration', w / 2, h - 5);
+  ctxI.save();
+  ctxI.translate(15, h / 2);
+  ctxI.rotate(-Math.PI / 2);
+  ctxI.fillText('Inertia', 0, 0);
+  ctxI.restore();
+  ctxI.textAlign = 'left';
+
+  // Y tick
+  ctxI.fillStyle = '#555';
+  ctxI.font = "10px 'IBM Plex Mono'";
+  ctxI.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const val = minInertia + (maxInertia - minInertia) * (1 - i / 4);
+    const y = margin.top + (i / 4) * ch;
+    ctxI.fillText(val.toFixed(0), margin.left - 8, y + 4);
+    ctxI.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctxI.beginPath(); ctxI.moveTo(margin.left, y); ctxI.lineTo(w - margin.right, y); ctxI.stroke();
+  }
+  ctxI.textAlign = 'left';
+
+  // Plot
+  const n = inertiaHistory.length;
+  ctxI.strokeStyle = 'var(--red)';
+  ctxI.lineWidth = 2;
+  ctxI.beginPath();
+  for (let i = 0; i < n; i++) {
+    const x = margin.left + (i / Math.max(n - 1, 1)) * cw;
+    const y = margin.top + (1 - (inertiaHistory[i] - minInertia) / (maxInertia - minInertia)) * ch;
+    if (i === 0) ctxI.moveTo(x, y);
+    else ctxI.lineTo(x, y);
+  }
+  ctxI.stroke();
+
+  // Dots
+  for (let i = 0; i < n; i++) {
+    const x = margin.left + (i / Math.max(n - 1, 1)) * cw;
+    const y = margin.top + (1 - (inertiaHistory[i] - minInertia) / (maxInertia - minInertia)) * ch;
+    ctxI.beginPath();
+    ctxI.arc(x, y, 4, 0, Math.PI * 2);
+    ctxI.fillStyle = '#ff2222';
+    ctxI.fill();
+
+    // X labels
+    ctxI.fillStyle = '#555';
+    ctxI.font = "10px 'IBM Plex Mono'";
+    ctxI.textAlign = 'center';
+    ctxI.fillText(i.toString(), x, h - margin.bottom + 15);
+    ctxI.textAlign = 'left';
+  }
+}
+
+function drawAll() {
+  drawMainCanvas();
+  drawTrailsCanvas();
+  drawInertiaChart();
+}
+
+// ==========================================
+// K-MEANS ALGORITHM
+// ==========================================
+function getK() {
+  return parseInt(document.getElementById('k-slider').value);
+}
+
+function updateK() {
+  const k = getK();
+  document.getElementById('k-val').textContent = k;
+  document.getElementById('info-k').textContent = k;
+}
+
+function computeInertia() {
+  let inertia = 0;
+  for (let i = 0; i < points.length; i++) {
+    if (labels[i] !== undefined && labels[i] >= 0) {
+      inertia += dist2(points[i], centroids[labels[i]]);
+    }
+  }
+  return inertia;
+}
+
+function assignPoints() {
+  labels = [];
+  for (let i = 0; i < points.length; i++) {
+    let bestK = 0, bestD = Infinity;
+    for (let k = 0; k < centroids.length; k++) {
+      const d = dist2(points[i], centroids[k]);
+      if (d < bestD) { bestD = d; bestK = k; }
+    }
+    labels.push(bestK);
+  }
+}
+
+function updateCentroids() {
+  const K = centroids.length;
+  const sums = Array.from({length: K}, () => ({x: 0, y: 0, count: 0}));
+
+  for (let i = 0; i < points.length; i++) {
+    const k = labels[i];
+    sums[k].x += points[i].x;
+    sums[k].y += points[i].y;
+    sums[k].count++;
+  }
+
+  let moved = false;
+  for (let k = 0; k < K; k++) {
+    if (sums[k].count === 0) continue; // keep centroid in place if empty cluster
+    const newX = sums[k].x / sums[k].count;
+    const newY = sums[k].y / sums[k].count;
+    if (Math.abs(newX - centroids[k].x) > 1e-8 || Math.abs(newY - centroids[k].y) > 1e-8) {
+      moved = true;
+    }
+    centroids[k] = { x: newX, y: newY };
+  }
+
+  return moved;
+}
+
+function initKMeans() {
+  if (points.length < getK()) return;
+
+  stopAnim();
+  const K = getK();
+
+  // K-Means++ initialization
+  centroids = [];
+  const idx0 = Math.floor(Math.random() * points.length);
+  centroids.push({ ...points[idx0] });
+
+  for (let k = 1; k < K; k++) {
+    // Compute distances to nearest existing centroid
+    const dists = points.map(p => {
+      let minD = Infinity;
+      for (const c of centroids) minD = Math.min(minD, dist2(p, c));
+      return minD;
+    });
+    const totalD = dists.reduce((a, b) => a + b, 0);
+    // Weighted random pick
+    let r = Math.random() * totalD;
+    for (let i = 0; i < points.length; i++) {
+      r -= dists[i];
+      if (r <= 0) { centroids.push({ ...points[i] }); break; }
+    }
+    if (centroids.length <= k) centroids.push({ ...points[Math.floor(Math.random() * points.length)] });
+  }
+
+  labels = [];
+  assignPoints();
+
+  iteration = 0;
+  converged = false;
+  centroidHistory = [centroids.map(c => ({ ...c }))];
+  inertiaHistory = [computeInertia()];
+
+  document.getElementById('info-status').textContent = 'INITIALIZED';
+  updateInfoPanel();
+  updateStepDetails();
+  drawAll();
+  logIteration('K-Means++ initialized with K=' + K);
+}
+
+function stepKMeans() {
+  if (centroids.length === 0 || converged) return;
+
+  iteration++;
+  const moved = updateCentroids();
+  assignPoints();
+
+  centroidHistory.push(centroids.map(c => ({ ...c })));
+  inertiaHistory.push(computeInertia());
+
+  if (!moved) {
+    converged = true;
+    document.getElementById('info-status').textContent = 'CONVERGED';
+    logIteration(`Iter ${iteration}: CONVERGED! Inertia = ${computeInertia().toFixed(2)}`);
+  } else {
+    document.getElementById('info-status').textContent = `ITER ${iteration}`;
+    logIteration(`Iter ${iteration}: Inertia = ${computeInertia().toFixed(2)}`);
+  }
+
+  updateInfoPanel();
+  updateStepDetails();
+  drawAll();
+}
+
+function runKMeans() {
+  if (centroids.length === 0) initKMeans();
+  if (converged) return;
+
+  animRunning = true;
+  document.getElementById('info-status').textContent = 'RUNNING...';
+
+  function tick() {
+    if (converged || !animRunning) {
+      animRunning = false;
+      return;
+    }
+    stepKMeans();
+    const speed = parseInt(document.getElementById('speed-slider').value);
+    const delay = Math.max(50, 600 - speed * 55);
+    animTimer = setTimeout(tick, delay);
+  }
+  tick();
+}
+
+function stopAnim() {
+  animRunning = false;
+  if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+}
+
+function resetCentroids() {
+  stopAnim();
+  initKMeans();
+}
+
+function clearAll() {
+  stopAnim();
+  points = [];
+  centroids = [];
+  labels = [];
+  centroidHistory = [];
+  inertiaHistory = [];
+  iteration = 0;
+  converged = false;
+  document.getElementById('info-status').textContent = 'READY';
+  document.getElementById('iteration-log').innerHTML = '<div style="color:#555;">Run the algorithm to see iteration details...</div>';
+  updateInfoPanel();
+  drawAll();
+}
+
+// ==========================================
+// INFO PANEL
+// ==========================================
+function updateInfoPanel() {
+  document.getElementById('info-points').textContent = points.length;
+  document.getElementById('info-k').textContent = getK();
+  document.getElementById('info-iter').textContent = iteration;
+  const inertia = centroids.length > 0 && labels.length > 0 ? computeInertia() : null;
+  document.getElementById('info-inertia').textContent = inertia !== null ? inertia.toFixed(1) : '--';
+}
+
+function logIteration(msg) {
+  const log = document.getElementById('iteration-log');
+  if (iteration <= 1 && log.querySelector('div[style]')) {
+    log.innerHTML = '';
+  }
+  const entry = document.createElement('div');
+  entry.className = 'iter-entry';
+  entry.innerHTML = `<span class="iter-num">${iteration.toString().padStart(3, '0')}</span><span>${msg}</span>`;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+}
+
+function updateStepDetails() {
+  const fmt = v => v.toFixed(4);
+
+  if (centroids.length > 0) {
+    document.getElementById('step-detail-0').textContent =
+      `K = ${centroids.length}\n` +
+      `Initial centroids (K-Means++ selection):\n` +
+      centroids.map((c, i) => `  C${i + 1} = (${fmt(c.x)}, ${fmt(c.y)})`).join('\n');
+  }
+
+  if (labels.length > 0) {
+    const counts = Array(centroids.length).fill(0);
+    labels.forEach(l => counts[l]++);
+    document.getElementById('step-detail-1').textContent =
+      `Cluster sizes:\n` +
+      counts.map((c, i) => `  C${i + 1}: ${c} points`).join('\n') +
+      `\n\nFirst 10 assignments:\n` +
+      labels.slice(0, 10).map((l, i) => `  point ${i} -> C${l + 1}`).join('\n') +
+      (labels.length > 10 ? `\n  ... (${labels.length - 10} more)` : '');
+  }
+
+  if (centroids.length > 0) {
+    document.getElementById('step-detail-2').textContent =
+      `Updated centroids (cluster means):\n` +
+      centroids.map((c, i) => `  C${i + 1} = (${fmt(c.x)}, ${fmt(c.y)})`).join('\n');
+  }
+
+  document.getElementById('step-detail-3').textContent =
+    converged
+      ? `CONVERGED at iteration ${iteration}.\nCentroids stopped moving.\nFinal inertia: ${computeInertia().toFixed(4)}`
+      : `Iteration ${iteration}: centroids still moving.\nInertia: ${labels.length > 0 ? computeInertia().toFixed(4) : '--'}`;
+}
+
+function highlightStep(idx) {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById(`step-${i}`).classList.toggle('active-step', i === idx);
+    document.getElementById(`step-detail-${i}`).style.display = (i === idx && centroids.length > 0) ? 'block' : 'none';
+  }
+}
+
+// ==========================================
+// INTERACTION
+// ==========================================
+canvasMain.addEventListener('mouseup', (e) => {
+  const rect = canvasMain.getBoundingClientRect();
+  const [x, y] = canvasToData(canvasMain, e.clientX - rect.left, e.clientY - rect.top);
+  points.push({ x, y });
+
+  // If K-Means was already initialized, re-assign
+  if (centroids.length > 0) {
+    assignPoints();
+    inertiaHistory[inertiaHistory.length - 1] = computeInertia();
+  }
+  updateInfoPanel();
+  drawAll();
+});
+
+canvasMain.addEventListener('mousemove', (e) => {
+  const rect = canvasMain.getBoundingClientRect();
+  const [x, y] = canvasToData(canvasMain, e.clientX - rect.left, e.clientY - rect.top);
+  const tooltip = document.getElementById('tooltip');
+  tooltip.style.display = 'block';
+  tooltip.style.left = (e.clientX + 15) + 'px';
+  tooltip.style.top = (e.clientY - 10) + 'px';
+  tooltip.textContent = `(${x.toFixed(2)}, ${y.toFixed(2)})`;
+});
+
+canvasMain.addEventListener('mouseleave', () => {
+  document.getElementById('tooltip').style.display = 'none';
+});
+
+// ==========================================
+// PRESETS
+// ==========================================
+function loadPreset(name) {
+  stopAnim();
+  const n = parseInt(document.getElementById('npoints-slider').value);
+  points = [];
+  centroids = [];
+  labels = [];
+  centroidHistory = [];
+  inertiaHistory = [];
+  iteration = 0;
+  converged = false;
+
+  const generators = {
+    blobs: () => {
+      const centers = [[-3, 3], [3, 3], [0, -3]];
+      for (let i = 0; i < n; i++) {
+        const c = centers[i % 3];
+        points.push({ x: c[0] + randN() * 0.8, y: c[1] + randN() * 0.8 });
+      }
+    },
+    uneven: () => {
+      for (let i = 0; i < n; i++) {
+        if (i < n * 0.6) {
+          points.push({ x: -2 + randN() * 0.5, y: 2 + randN() * 0.5 });
+        } else if (i < n * 0.85) {
+          points.push({ x: 3 + randN() * 1.2, y: -1 + randN() * 1.2 });
+        } else {
+          points.push({ x: -1 + randN() * 0.3, y: -3 + randN() * 0.3 });
+        }
+      }
+    },
+    moons: () => {
+      for (let i = 0; i < n; i++) {
+        const t = (i / n) * Math.PI;
+        if (i < n / 2) {
+          points.push({ x: Math.cos(t) * 3 + randN() * 0.3, y: Math.sin(t) * 3 + randN() * 0.3 });
+        } else {
+          points.push({ x: 1 + Math.cos(t) * 3 + randN() * 0.3, y: -Math.sin(t) * 3 + 0.5 + randN() * 0.3 });
+        }
+      }
+    },
+    ring: () => {
+      for (let i = 0; i < n; i++) {
+        if (i < n * 0.4) {
+          points.push({ x: randN() * 0.5, y: randN() * 0.5 });
+        } else {
+          const angle = Math.random() * Math.PI * 2;
+          const r = 3.5 + randN() * 0.3;
+          points.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
+        }
+      }
+    },
+    random: () => {
+      for (let i = 0; i < n; i++) {
+        points.push({ x: (Math.random() - 0.5) * 10, y: (Math.random() - 0.5) * 10 });
+      }
+    }
+  };
+
+  generators[name]();
+  document.getElementById('info-status').textContent = 'READY';
+  document.getElementById('iteration-log').innerHTML = '<div style="color:#555;">Run the algorithm to see iteration details...</div>';
+  updateInfoPanel();
+  drawAll();
+}
+
+// ==========================================
+// TAB SWITCHING
+// ==========================================
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('visible'));
+
+  if (tab === 'kmeans') {
+    document.querySelector('.tab-btn:nth-child(1)').classList.add('active-tab');
+    document.getElementById('tab-kmeans').classList.add('visible');
+    document.getElementById('tab-kmeans').offsetHeight;
+    requestAnimationFrame(() => initCanvases());
+  } else {
+    document.querySelector('.tab-btn:nth-child(2)').classList.add('active-tab');
+    document.getElementById('tab-explain').classList.add('visible');
+    document.getElementById('tab-explain').offsetHeight;
+    requestAnimationFrame(() => initExplainCanvases());
+  }
+}
+
+// ==========================================
+// EXPLAINER CANVASES
+// ==========================================
+let voronoiCentroids = [
+  { x: -2, y: 2 }, { x: 3, y: 1 }, { x: 0, y: -3 }
+];
+let voronoiPoints = [];
+
+function initExplainCanvases() {
+  const ids = ['canvas-voronoi', 'canvas-elbow-explain', 'canvas-init-explain'];
+  let ok = true;
+  ids.forEach(id => {
+    const c = document.getElementById(id);
+    if (c && !setupCanvas(c)) ok = false;
+  });
+  if (!ok) return;
+  drawVoronoi();
+  drawElbowExplain();
+  drawInitExplain();
+}
+
+function drawVoronoi() {
+  const canvas = document.getElementById('canvas-voronoi');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  if (w === 0 || h === 0) return;
+  ctx.clearRect(0, 0, w, h);
+
+  const bounds = { xMin: -6, xMax: 6, yMin: -5, yMax: 5 };
+  const margin = 20;
+
+  function toX(v) { return margin + (v - bounds.xMin) / (bounds.xMax - bounds.xMin) * (w - 2 * margin); }
+  function toY(v) { return h - margin - (v - bounds.yMin) / (bounds.yMax - bounds.yMin) * (h - 2 * margin); }
+
+  // Draw Voronoi regions (pixel by pixel, but sampled)
+  const step = 4;
+  for (let px = 0; px < w; px += step) {
+    for (let py = 0; py < h; py += step) {
+      const dx = bounds.xMin + (px - margin) / (w - 2 * margin) * (bounds.xMax - bounds.xMin);
+      const dy = bounds.yMin + (h - margin - py) / (h - 2 * margin) * (bounds.yMax - bounds.yMin);
+      let bestK = 0, bestD = Infinity;
+      for (let k = 0; k < voronoiCentroids.length; k++) {
+        const d = (dx - voronoiCentroids[k].x) ** 2 + (dy - voronoiCentroids[k].y) ** 2;
+        if (d < bestD) { bestD = d; bestK = k; }
+      }
+      ctx.fillStyle = CLUSTER_COLORS_DIM[bestK];
+      ctx.fillRect(px, py, step, step);
+    }
+  }
+
+  // Draw user-placed points
+  for (const p of voronoiPoints) {
+    let bestK = 0, bestD = Infinity;
+    for (let k = 0; k < voronoiCentroids.length; k++) {
+      const d = (p.x - voronoiCentroids[k].x) ** 2 + (p.y - voronoiCentroids[k].y) ** 2;
+      if (d < bestD) { bestD = d; bestK = k; }
+    }
+    ctx.beginPath();
+    ctx.arc(toX(p.x), toY(p.y), 4, 0, Math.PI * 2);
+    ctx.fillStyle = CLUSTER_COLORS[bestK];
+    ctx.fill();
+  }
+
+  // Draw centroids
+  for (let k = 0; k < voronoiCentroids.length; k++) {
+    const cx = toX(voronoiCentroids[k].x);
+    const cy = toY(voronoiCentroids[k].y);
+    ctx.beginPath();
+    ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+    ctx.fillStyle = CLUSTER_COLORS[k];
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = "bold 11px 'IBM Plex Mono'";
+    ctx.textAlign = 'center';
+    ctx.fillText(`C${k + 1}`, cx, cy + 22);
+    ctx.textAlign = 'left';
+  }
+}
+
+// Voronoi click handler
+document.getElementById('canvas-voronoi')?.addEventListener('click', (e) => {
+  const canvas = document.getElementById('canvas-voronoi');
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  const margin = 20;
+  const bounds = { xMin: -6, xMax: 6, yMin: -5, yMax: 5 };
+  const px = e.clientX - rect.left;
+  const py = e.clientY - rect.top;
+  const dx = bounds.xMin + (px - margin) / (w - 2 * margin) * (bounds.xMax - bounds.xMin);
+  const dy = bounds.yMin + (h - margin - py) / (h - 2 * margin) * (bounds.yMax - bounds.yMin);
+  voronoiPoints.push({ x: dx, y: dy });
+  drawVoronoi();
+});
+
+function resetVoronoi() {
+  voronoiCentroids = [
+    { x: -3 + Math.random() * 2, y: 1 + Math.random() * 2 },
+    { x: 1 + Math.random() * 3, y: Math.random() * 2 },
+    { x: -1 + Math.random() * 2, y: -2 - Math.random() * 2 }
+  ];
+  voronoiPoints = [];
+  drawVoronoi();
+}
+
+// Pre-computed data for elbow demo
+const elbowDemoData = (() => {
+  let seed = 99;
+  function sr() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+  function sn() { return Math.sqrt(-2 * Math.log(sr())) * Math.cos(2 * Math.PI * sr()); }
+
+  const pts = [];
+  const centers = [[-3, 3], [3, 2], [0, -3]];
+  for (let i = 0; i < 90; i++) {
+    const c = centers[i % 3];
+    pts.push({ x: c[0] + sn() * 0.8, y: c[1] + sn() * 0.8 });
+  }
+
+  // Run k-means for K=1..8 to get inertia
+  const inertias = [];
+  for (let K = 1; K <= 8; K++) {
+    // Simple k-means
+    let ctr = pts.slice(0, K).map(p => ({ ...p }));
+    for (let iter = 0; iter < 20; iter++) {
+      const lab = pts.map(p => {
+        let best = 0, bestD = Infinity;
+        for (let k = 0; k < K; k++) {
+          const d = (p.x - ctr[k].x) ** 2 + (p.y - ctr[k].y) ** 2;
+          if (d < bestD) { bestD = d; best = k; }
+        }
+        return best;
+      });
+      const sums = Array.from({length: K}, () => ({x: 0, y: 0, c: 0}));
+      lab.forEach((k, i) => { sums[k].x += pts[i].x; sums[k].y += pts[i].y; sums[k].c++; });
+      sums.forEach((s, k) => { if (s.c > 0) ctr[k] = {x: s.x/s.c, y: s.y/s.c}; });
+    }
+    let inertia = 0;
+    const lab = pts.map(p => {
+      let best = 0, bestD = Infinity;
+      for (let k = 0; k < K; k++) {
+        const d = (p.x - ctr[k].x) ** 2 + (p.y - ctr[k].y) ** 2;
+        if (d < bestD) { bestD = d; best = k; }
+      }
+      inertia += bestD;
+      return best;
+    });
+    inertias.push(inertia);
+  }
+  return inertias;
+})();
+
+function drawElbowExplain() {
+  const canvas = document.getElementById('canvas-elbow-explain');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  if (w === 0 || h === 0) return;
+  ctx.clearRect(0, 0, w, h);
+
+  const margin = { top: 20, right: 30, bottom: 35, left: 60 };
+  const cw = w - margin.left - margin.right;
+  const ch = h - margin.top - margin.bottom;
+
+  const maxI = Math.max(...elbowDemoData) * 1.1;
+
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(margin.left, margin.top);
+  ctx.lineTo(margin.left, h - margin.bottom);
+  ctx.lineTo(w - margin.right, h - margin.bottom);
+  ctx.stroke();
+
+  ctx.fillStyle = '#666';
+  ctx.font = "11px 'Special Elite'";
+  ctx.textAlign = 'center';
+  ctx.fillText('K (number of clusters)', w / 2, h - 5);
+  ctx.textAlign = 'left';
+
+  // Plot
+  ctx.strokeStyle = '#ff2222';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < elbowDemoData.length; i++) {
+    const x = margin.left + (i / (elbowDemoData.length - 1)) * cw;
+    const y = margin.top + (1 - elbowDemoData[i] / maxI) * ch;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  for (let i = 0; i < elbowDemoData.length; i++) {
+    const x = margin.left + (i / (elbowDemoData.length - 1)) * cw;
+    const y = margin.top + (1 - elbowDemoData[i] / maxI) * ch;
+    ctx.beginPath();
+    ctx.arc(x, y, i === 2 ? 7 : 4, 0, Math.PI * 2);
+    ctx.fillStyle = i === 2 ? '#ff2222' : '#882222';
+    ctx.fill();
+
+    ctx.fillStyle = '#888';
+    ctx.font = "10px 'IBM Plex Mono'";
+    ctx.textAlign = 'center';
+    ctx.fillText((i + 1).toString(), x, h - margin.bottom + 14);
+    ctx.textAlign = 'left';
+  }
+
+  // Elbow annotation
+  const elbowX = margin.left + (2 / (elbowDemoData.length - 1)) * cw;
+  const elbowY = margin.top + (1 - elbowDemoData[2] / maxI) * ch;
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(elbowX, elbowY - 20);
+  ctx.lineTo(elbowX, elbowY - 40);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#fff';
+  ctx.font = "bold 11px 'Special Elite'";
+  ctx.textAlign = 'center';
+  ctx.fillText('ELBOW', elbowX, elbowY - 45);
+  ctx.textAlign = 'left';
+}
+
+// Pre-computed init demo
+const initDemoData = (() => {
+  let seed = 77;
+  function sr() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+  function sn() { return Math.sqrt(-2 * Math.log(sr())) * Math.cos(2 * Math.PI * sr()); }
+  const pts = [];
+  const centers = [[-2, 2], [2, 2], [0, -2]];
+  for (let i = 0; i < 60; i++) {
+    const c = centers[i % 3];
+    pts.push({ x: c[0] + sn() * 0.6, y: c[1] + sn() * 0.6 });
+  }
+  return pts;
+})();
+
+function drawInitExplain() {
+  const canvas = document.getElementById('canvas-init-explain');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  if (w === 0 || h === 0) return;
+  ctx.clearRect(0, 0, w, h);
+
+  const halfW = w / 2;
+  const bounds = { xMin: -5, xMax: 5, yMin: -4, yMax: 4 };
+  const margin = 25;
+
+  function toX(v, ox) { return ox + margin + (v - bounds.xMin) / (bounds.xMax - bounds.xMin) * (halfW - 2 * margin); }
+  function toY(v) { return h - margin - (v - bounds.yMin) / (bounds.yMax - bounds.yMin) * (h - 2 * margin); }
+
+  // Two scenarios side by side
+  const scenarios = [
+    { title: 'GOOD INIT', centroids: [{ x: -2, y: 2 }, { x: 2, y: 2 }, { x: 0, y: -2 }] },
+    { title: 'BAD INIT', centroids: [{ x: -2, y: 2.5 }, { x: -1.5, y: 1.5 }, { x: 2, y: 2 }] }
+  ];
+
+  scenarios.forEach((sc, si) => {
+    const ox = si * halfW;
+
+    // Run quick k-means
+    let ctr = sc.centroids.map(c => ({ ...c }));
+    let lab = [];
+    for (let iter = 0; iter < 15; iter++) {
+      lab = initDemoData.map(p => {
+        let best = 0, bestD = Infinity;
+        for (let k = 0; k < 3; k++) {
+          const d = (p.x - ctr[k].x) ** 2 + (p.y - ctr[k].y) ** 2;
+          if (d < bestD) { bestD = d; best = k; }
+        }
+        return best;
+      });
+      const sums = [0, 1, 2].map(() => ({x: 0, y: 0, c: 0}));
+      lab.forEach((k, i) => { sums[k].x += initDemoData[i].x; sums[k].y += initDemoData[i].y; sums[k].c++; });
+      sums.forEach((s, k) => { if (s.c > 0) ctr[k] = {x: s.x/s.c, y: s.y/s.c}; });
+    }
+
+    // Draw background
+    ctx.fillStyle = si === 0 ? 'rgba(34,204,68,0.03)' : 'rgba(255,34,34,0.03)';
+    ctx.fillRect(ox, 0, halfW, h);
+
+    // Title
+    ctx.fillStyle = si === 0 ? '#22cc44' : '#ff2222';
+    ctx.font = "bold 14px 'Bebas Neue'";
+    ctx.textAlign = 'center';
+    ctx.fillText(sc.title, ox + halfW / 2, 18);
+    ctx.textAlign = 'left';
+
+    // Divider
+    if (si === 0) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(halfW, 0);
+      ctx.lineTo(halfW, h);
+      ctx.stroke();
+    }
+
+    // Points
+    for (let i = 0; i < initDemoData.length; i++) {
+      const px = toX(initDemoData[i].x, ox);
+      const py = toY(initDemoData[i].y);
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI * 2);
+      ctx.fillStyle = CLUSTER_COLORS[lab[i]];
+      ctx.globalAlpha = 0.6;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // Centroids
+    for (let k = 0; k < 3; k++) {
+      const cx = toX(ctr[k].x, ox);
+      const cy = toY(ctr[k].y);
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+      ctx.fillStyle = CLUSTER_COLORS[k];
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  });
+}
+
+// ==========================================
+// STARTUP
+// ==========================================
+setTimeout(() => {
+  loadPreset('blobs');
+  initKMeans();
+}, 200);
+
+</script>
+</body>
+</html>

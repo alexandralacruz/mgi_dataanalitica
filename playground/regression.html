@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard: Lineal vs Logística | Jala University</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+        .main-container { max-width: 1200px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .full-width { grid-column: 1 / -1; background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 10px; padding: 15px; }
+        .chart-card { background: white; border: 1px solid #eee; padding: 15px; border-radius: 10px; }
+        .controls { background: #2c3e50; color: white; padding: 20px; border-radius: 10px; display: flex; justify-content: space-around; align-items: center; }
+        .badge { padding: 5px 10px; border-radius: 5px; font-size: 0.8em; font-weight: bold; margin-bottom: 10px; display: inline-block; }
+        .badge-continuous { background: #d4edda; color: #155724; }
+        .badge-discrete { background: #fff3cd; color: #856404; }
+        h3 { margin-top: 0; }
+        input[type=range] { width: 150px; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <h2 style="text-align: center;">Data Continua vs. Datos Discretos</h2>
+
+    <div class="grid">
+        <div class="chart-card">
+            <span class="badge badge-continuous">Dato Continuo: Calificación</span>
+            <h3>Caso A: Horas de Estudio</h3>
+            <p><small>Predecir la nota exacta (0 a 10). Aquí la línea recta es perfecta.</small></p>
+            <canvas id="continuousChart"></canvas>
+        </div>
+
+        <div class="chart-card">
+            <span class="badge badge-discrete">Dato Discreto: ¿Aprobó?</span>
+            <h3>Caso B: Resultado Binario</h3>
+            <p><small>Predecir si aprueba (1) o no (0). La curva domina el límite.</small></p>
+            <canvas id="logisticChart"></canvas>
+        </div>
+
+        <div class="full-width">
+            <strong>💡 Guía para la clase:</strong> 
+            En el <strong>Caso A</strong>, buscamos un valor preciso (Regresión). En el <strong>Caso B</strong>, buscamos una probabilidad de pertenecer a una categoría (Clasificación).
+        </div>
+    </div>
+
+    <div class="controls">
+        <div>
+            <label>Pendiente (m): <span id="m-val">1.5</span></label><br>
+            <input type="range" id="m-slider" min="0.1" max="4" step="0.1" value="1.5">
+        </div>
+        <div>
+            <label>Desplazamiento (b): <span id="b-val">0.0</span></label><br>
+            <input type="range" id="b-slider" min="-3" max="3" step="0.1" value="0">
+        </div>
+        <div style="font-size: 0.9em; max-width: 300px;">
+            Ajusta los parámetros para ver cómo la línea recta se adapta bien a la izquierda, pero falla en los bordes a la derecha.
+        </div>
+    </div>
+</div>
+
+<script>
+    const mSlider = document.getElementById('m-slider');
+    const bSlider = document.getElementById('b-slider');
+    
+    // Generar datos
+    const continuousData = [];
+    const discreteData = [];
+    for(let i=0; i<40; i++) {
+        let x = (Math.random() * 4) - 2;
+        // Caso Continuo (y = 2x + 5 + ruido)
+        continuousData.push({x: x, y: 1.5 * x + 2 + (Math.random() - 0.5)});
+        // Caso Discreto
+        let prob = 1 / (1 + Math.exp(-3 * x));
+        discreteData.push({x: x, y: Math.random() < prob ? 1 : 0});
+    }
+
+    const chartOptions = (title, yMin, yMax) => ({
+        responsive: true,
+        scales: {
+            x: { type: 'linear', min: -3, max: 3 },
+            y: { min: yMin, max: yMax }
+        },
+        animation: false,
+        plugins: { title: { display: false } }
+    });
+
+    const ctxCont = document.getElementById('continuousChart').getContext('2d');
+    const contChart = new Chart(ctxCont, {
+        type: 'scatter',
+        data: {
+            datasets: [{ label: 'Notas Alumnos', data: continuousData, backgroundColor: '#2ecc71' },
+                       { label: 'Modelo Lineal', data: [], type: 'line', borderColor: '#27ae60', pointRadius: 0 }]
+        },
+        options: chartOptions('Continuo', -1, 5)
+    });
+
+    const ctxLog = document.getElementById('logisticChart').getContext('2d');
+    const logChart = new Chart(ctxLog, {
+        type: 'scatter',
+        data: {
+            datasets: [{ label: 'Aprobado/Reprobado', data: discreteData, backgroundColor: '#f1c40f' },
+                       { label: 'Sigmoide Logística', data: [], type: 'line', borderColor: '#e67e22', pointRadius: 0 }]
+        },
+        options: chartOptions('Discreto', -0.2, 1.2)
+    });
+
+    function update() {
+        const m = parseFloat(mSlider.value);
+        const b = parseFloat(bSlider.value);
+        document.getElementById('m-val').innerText = m;
+        document.getElementById('b-val').innerText = b;
+
+        // Update Linear
+        const linPoints = [];
+        for(let x=-3; x<=3; x+=0.5) linPoints.push({x: x, y: m * x + (b + 2)});
+        contChart.data.datasets[1].data = linPoints;
+        contChart.update();
+
+        // Update Logistic
+        const logPoints = [];
+        for(let x=-3; x<=3; x+=0.1) logPoints.push({x: x, y: 1 / (1 + Math.exp(-(m * 3 * x + b)))});
+        logChart.data.datasets[1].data = logPoints;
+        logChart.update();
+    }
+
+    mSlider.oninput = update;
+    bSlider.oninput = update;
+    update();
+</script>
+</body>
+</html>

@@ -1,0 +1,1998 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Model Metrics Playground — CSDS 352</title>
+    <style>
+      /* =================================================================
+         TRASH POLKA PALETTE — two ink colors, paper, and a little dirt
+         ================================================================= */
+      :root {
+        --paper:     #efe7d4;
+        --paper-2:   #e8dfc8;
+        --ink:       #0b0b0b;
+        --ink-soft:  #2a2824;
+        --muted:     #6b6558;
+        --line:      #0b0b0b;
+        --line-soft: rgba(11,11,11,0.18);
+        --red:       #c8102e;
+        --red-deep:  #8a0a1f;
+        --red-soft:  rgba(200,16,46,0.12);
+        --good:      #0b0b0b;   /* trash polka is black + red only */
+        --ok-bg:     rgba(11,11,11,0.06);
+
+        --stack-display: "Impact", "Haettenschweiler", "Arial Narrow Bold",
+                         "Oswald", system-ui, sans-serif;
+        --stack-serif:   "Georgia", "Times New Roman", "Iowan Old Style", serif;
+        --stack-mono:    "Courier New", ui-monospace, "Roboto Mono", monospace;
+        --stack-ui:      system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+
+      /* paper + grain */
+      body {
+        font-family: var(--stack-serif);
+        color: var(--ink);
+        font-size: 14px;
+        line-height: 1.55;
+        background:
+          radial-gradient(1200px 600px at 15% -10%, rgba(200,16,46,0.05), transparent 60%),
+          radial-gradient(900px 500px at 110% 20%, rgba(11,11,11,0.04), transparent 60%),
+          var(--paper);
+        min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
+      }
+      body::before {
+        /* grain */
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.04 0 0 0 0 0.04 0 0 0 0 0.04 0 0 0 0.25 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/></svg>");
+        opacity: 0.45;
+        mix-blend-mode: multiply;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* ============================== HEADER ============================== */
+      header {
+        position: relative;
+        background: var(--ink);
+        color: var(--paper);
+        padding: 34px 40px 40px;
+        overflow: hidden;
+        border-bottom: 6px solid var(--red);
+      }
+      header::before {
+        /* red streak */
+        content: "";
+        position: absolute;
+        left: -40px; right: -40px; top: 58%;
+        height: 22px;
+        background: var(--red);
+        transform: rotate(-2.5deg);
+        opacity: 0.95;
+      }
+      header::after {
+        /* splatter */
+        content: "";
+        position: absolute;
+        right: 20px; top: 10px; width: 220px; height: 180px;
+        background:
+          radial-gradient(10px 10px at 20% 30%, var(--red) 99%, transparent 100%),
+          radial-gradient(4px 4px at 60% 20%, var(--red) 99%, transparent 100%),
+          radial-gradient(14px 8px at 80% 60%, var(--red) 99%, transparent 100%),
+          radial-gradient(3px 3px at 40% 70%, var(--red) 99%, transparent 100%),
+          radial-gradient(6px 6px at 70% 90%, var(--red) 99%, transparent 100%),
+          radial-gradient(2px 2px at 30% 50%, var(--red) 99%, transparent 100%);
+        opacity: 0.85;
+        pointer-events: none;
+        transform: rotate(8deg);
+      }
+      header h1 {
+        margin: 0 0 6px;
+        font-family: var(--stack-display);
+        font-size: 44px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        line-height: 0.95;
+        position: relative;
+        z-index: 2;
+      }
+      header h1 .red { color: var(--red); }
+      header h1 .slash { color: var(--red); font-weight: 100; margin: 0 6px; }
+      header .sub {
+        font-family: var(--stack-mono);
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.85;
+        position: relative;
+        z-index: 2;
+      }
+      header .stamp {
+        position: absolute;
+        right: 40px; top: 38px;
+        font-family: var(--stack-mono);
+        color: var(--paper);
+        border: 3px solid var(--paper);
+        padding: 6px 14px;
+        transform: rotate(6deg);
+        letter-spacing: 0.12em;
+        font-size: 11px;
+        opacity: 0.85;
+        z-index: 3;
+      }
+
+      /* ============================== TABS ============================== */
+      .tabs {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        gap: 0;
+        padding: 0 24px;
+        background: var(--paper);
+        border-bottom: 3px solid var(--ink);
+        overflow-x: auto;
+      }
+      .tab {
+        appearance: none;
+        border: none;
+        background: transparent;
+        padding: 16px 22px 14px;
+        font-family: var(--stack-display);
+        font-size: 18px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink);
+        cursor: pointer;
+        position: relative;
+        white-space: nowrap;
+        margin-bottom: -3px;
+        border-bottom: 5px solid transparent;
+        transition: border-color 0.15s, color 0.15s;
+      }
+      .tab:hover { color: var(--red); }
+      .tab.active {
+        border-bottom-color: var(--red);
+        color: var(--ink);
+      }
+      .tab .num {
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        color: var(--red);
+        margin-right: 8px;
+        letter-spacing: 0.1em;
+      }
+
+      /* ============================== LAYOUT ============================== */
+      main {
+        position: relative;
+        z-index: 1;
+        padding: 28px 32px 60px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .view { display: none; }
+      .view.active { display: block; }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 390px;
+        gap: 22px;
+      }
+      @media (max-width: 1040px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+
+      /* ============================== PANEL ============================== */
+      .panel {
+        position: relative;
+        background: var(--paper-2);
+        border: 2.5px solid var(--ink);
+        padding: 18px 18px 16px;
+        box-shadow: 4px 4px 0 var(--ink);
+      }
+      .panel + .panel { margin-top: 18px; }
+      .panel.tilt-1 { transform: rotate(-0.35deg); }
+      .panel.tilt-2 { transform: rotate(0.3deg); }
+
+      .panel h2 {
+        font-family: var(--stack-display);
+        font-size: 22px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin: 0 0 6px;
+        display: inline-block;
+        padding: 2px 10px 0;
+        background: var(--ink);
+        color: var(--paper);
+        transform: rotate(-0.6deg);
+      }
+      .panel h2 .red { color: var(--red); }
+      .panel h2::before {
+        content: "● ";
+        color: var(--red);
+        font-size: 14px;
+        vertical-align: middle;
+      }
+
+      .hint {
+        font-family: var(--stack-mono);
+        color: var(--muted);
+        font-size: 11.5px;
+        letter-spacing: 0.02em;
+        margin: 6px 0 12px;
+        border-left: 3px solid var(--red);
+        padding-left: 10px;
+      }
+      .hint b { color: var(--ink); background: var(--red-soft); padding: 0 3px; }
+
+      /* ============================== CONTROLS ============================== */
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .btn {
+        appearance: none;
+        border: 2px solid var(--ink);
+        background: var(--paper);
+        padding: 8px 14px;
+        font-family: var(--stack-display);
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink);
+        cursor: pointer;
+        box-shadow: 3px 3px 0 var(--ink);
+        transition: transform 0.08s, box-shadow 0.08s, background 0.15s;
+      }
+      .btn:hover { background: var(--paper-2); }
+      .btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+      .btn.primary {
+        background: var(--red);
+        color: var(--paper);
+        border-color: var(--ink);
+      }
+      .btn.primary:hover { background: var(--red-deep); }
+      .btn.ghost {
+        background: transparent;
+        box-shadow: none;
+        border-style: dashed;
+      }
+
+      .preset-row { display: flex; flex-wrap: wrap; gap: 6px; }
+      .chip {
+        appearance: none;
+        background: var(--paper);
+        color: var(--ink);
+        border: 1.5px solid var(--ink);
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 5px 10px;
+        cursor: pointer;
+        transition: background 0.12s;
+      }
+      .chip:hover { background: var(--ink); color: var(--paper); }
+      .chip.red { background: var(--red); color: var(--paper); border-color: var(--red); }
+      .chip.red:hover { background: var(--red-deep); border-color: var(--red-deep); }
+
+      .control { margin-bottom: 14px; }
+      .control label {
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink);
+        margin-bottom: 4px;
+      }
+      .control label .value {
+        background: var(--ink);
+        color: var(--paper);
+        padding: 1px 7px;
+        font-variant-numeric: tabular-nums;
+      }
+      .control input[type="range"] {
+        width: 100%;
+        accent-color: var(--red);
+      }
+      .checkbox-row {
+        display: flex; flex-wrap: wrap; gap: 14px;
+        margin-bottom: 10px;
+      }
+      .checkbox-row label {
+        display: flex; align-items: center; gap: 6px;
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+      .checkbox-row input { accent-color: var(--red); }
+
+      /* ============================== PLOTS ============================== */
+      svg.plot {
+        width: 100%;
+        height: auto;
+        display: block;
+        background: var(--paper);
+        border: 2px solid var(--ink);
+        touch-action: none;
+        user-select: none;
+      }
+      .legend {
+        display: flex; flex-wrap: wrap; gap: 14px;
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        color: var(--ink);
+        margin-top: 10px;
+        letter-spacing: 0.02em;
+      }
+      .legend .sw { display: inline-flex; align-items: center; gap: 6px; }
+      .legend .dot {
+        display: inline-block;
+        width: 12px; height: 12px;
+        border: 2px solid var(--ink);
+      }
+      .legend .dot.round { border-radius: 50%; }
+
+      /* ============================== METRICS ============================== */
+      .metrics {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .metric {
+        position: relative;
+        border: 2px solid var(--ink);
+        background: var(--paper);
+        padding: 12px 12px 14px;
+        box-shadow: 3px 3px 0 var(--ink);
+      }
+      .metric.tilt-a { transform: rotate(-0.8deg); }
+      .metric.tilt-b { transform: rotate(0.6deg); }
+      .metric.tilt-c { transform: rotate(-0.4deg); }
+      .metric.tilt-d { transform: rotate(0.9deg); }
+      .metric .name {
+        font-family: var(--stack-display);
+        font-size: 14px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ink);
+      }
+      .metric .val {
+        font-family: var(--stack-mono);
+        font-weight: 700;
+        font-size: 26px;
+        font-variant-numeric: tabular-nums;
+        margin-top: 2px;
+        color: var(--ink);
+      }
+      .metric .bar {
+        height: 6px;
+        background: var(--ink);
+        margin-top: 8px;
+        position: relative;
+        overflow: hidden;
+      }
+      .metric .bar > div {
+        height: 100%;
+        background: var(--red);
+        transition: width 0.18s;
+      }
+      .metric.red .val { color: var(--red); }
+      .metric.red .bar > div { background: var(--ink); }
+      .metric.red .bar { background: var(--red); }
+
+      /* ============================== FORMULAS ============================== */
+      .formula {
+        font-family: var(--stack-mono);
+        font-size: 13px;
+        color: var(--ink);
+        padding: 10px 12px;
+        background: var(--paper);
+        border: 1.5px solid var(--ink);
+        border-left: 6px solid var(--red);
+        margin-top: 8px;
+        overflow-x: auto;
+      }
+      .formula .lbl {
+        display: inline-block;
+        font-family: var(--stack-display);
+        background: var(--ink);
+        color: var(--paper);
+        padding: 1px 6px;
+        margin-right: 8px;
+        letter-spacing: 0.08em;
+      }
+
+      /* ============================== CONFUSION MATRIX ============================== */
+      .cm {
+        display: grid;
+        grid-template-columns: 80px 1fr 1fr;
+        grid-template-rows: 30px 1fr 1fr;
+        gap: 5px;
+        font-family: var(--stack-display);
+        font-size: 13px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      .cm .lbl {
+        color: var(--ink);
+        display: flex; align-items: center; justify-content: center;
+      }
+      .cm .cell {
+        border: 2px solid var(--ink);
+        padding: 10px;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        box-shadow: 3px 3px 0 var(--ink);
+      }
+      .cm .cell.tp { background: var(--ink); color: var(--paper); }
+      .cm .cell.tn { background: var(--paper); color: var(--ink); }
+      .cm .cell.fp { background: var(--red); color: var(--paper); }
+      .cm .cell.fn { background: var(--paper); color: var(--red); border-color: var(--red); box-shadow: 3px 3px 0 var(--red); }
+      .cm .cell .count {
+        font-family: var(--stack-mono);
+        font-weight: 700;
+        font-size: 28px;
+        line-height: 1;
+      }
+      .cm .cell .abbr {
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        margin-top: 4px;
+      }
+
+      /* ============================== INSIGHT ============================== */
+      .insight {
+        margin-top: 12px;
+        padding: 12px 14px;
+        background: var(--ink);
+        color: var(--paper);
+        font-family: var(--stack-serif);
+        font-size: 13px;
+        line-height: 1.55;
+        border-left: 6px solid var(--red);
+        position: relative;
+      }
+      .insight::before {
+        content: "//";
+        color: var(--red);
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        margin-right: 6px;
+      }
+      .insight b { color: var(--red); font-weight: 700; }
+
+      .section-title {
+        margin: 20px 0 10px;
+        font-family: var(--stack-display);
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--ink);
+        border-bottom: 2px solid var(--ink);
+        padding-bottom: 2px;
+      }
+
+      /* ============================== DISTANCES TAB ============================== */
+      .tensor-lab {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      @media (max-width: 900px) {
+        .tensor-lab { grid-template-columns: 1fr; }
+      }
+
+      /* ============================== QUIZ ============================== */
+      .quiz-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .quiz-head .pill {
+        font-family: var(--stack-mono);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        background: var(--red);
+        color: var(--paper);
+        padding: 4px 10px;
+      }
+      .q {
+        background: var(--paper-2);
+        border: 2.5px solid var(--ink);
+        box-shadow: 4px 4px 0 var(--ink);
+        padding: 18px 20px;
+        margin-bottom: 18px;
+        position: relative;
+      }
+      .q:nth-child(odd) { transform: rotate(-0.25deg); }
+      .q:nth-child(even) { transform: rotate(0.2deg); }
+      .q .num {
+        position: absolute;
+        top: -16px; left: -12px;
+        font-family: var(--stack-display);
+        font-size: 28px;
+        background: var(--red);
+        color: var(--paper);
+        padding: 2px 10px;
+        transform: rotate(-5deg);
+        letter-spacing: 0.04em;
+      }
+      .q .prompt {
+        font-family: var(--stack-serif);
+        font-size: 15px;
+        line-height: 1.5;
+        margin: 4px 0 14px;
+      }
+      .q .prompt code {
+        font-family: var(--stack-mono);
+        background: var(--ink);
+        color: var(--paper);
+        padding: 1px 6px;
+      }
+      .q .opts { display: flex; flex-direction: column; gap: 8px; }
+      .q .opt {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 9px 12px;
+        border: 1.5px solid var(--ink);
+        background: var(--paper);
+        cursor: pointer;
+        font-family: var(--stack-serif);
+        font-size: 14px;
+        transition: background 0.12s;
+      }
+      .q .opt:hover { background: var(--paper-2); }
+      .q .opt.selected {
+        background: var(--ink);
+        color: var(--paper);
+      }
+      .q .opt .key {
+        font-family: var(--stack-display);
+        font-size: 14px;
+        letter-spacing: 0.06em;
+        background: var(--red);
+        color: var(--paper);
+        padding: 1px 7px;
+        flex-shrink: 0;
+      }
+      .q.graded .opt { cursor: default; }
+      .q .opt.correct {
+        background: var(--paper);
+        color: var(--ink);
+        border-color: var(--ink);
+        border-width: 3px;
+        position: relative;
+      }
+      .q .opt.correct::after {
+        content: "✓ CORRECT";
+        position: absolute;
+        right: 10px; top: 50%;
+        transform: translateY(-50%);
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        color: var(--ink);
+        background: var(--paper-2);
+        border: 2px solid var(--ink);
+        padding: 1px 6px;
+      }
+      .q .opt.wrong {
+        background: var(--red);
+        color: var(--paper);
+        border-color: var(--red);
+        text-decoration: line-through;
+      }
+      .q .opt.wrong::after {
+        content: "✗ YOUR PICK";
+        position: absolute;
+        right: 10px; top: 50%;
+        transform: translateY(-50%);
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        color: var(--paper);
+        background: var(--ink);
+        padding: 1px 6px;
+        text-decoration: none;
+      }
+      .q .opt.correct .key { background: var(--ink); color: var(--paper); }
+      .q .expl {
+        display: none;
+        margin-top: 12px;
+        padding: 12px 14px;
+        background: var(--ink);
+        color: var(--paper);
+        border-left: 6px solid var(--red);
+        font-family: var(--stack-serif);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      .q.graded .expl { display: block; }
+      .q .expl b { color: var(--red); }
+
+      .score-card {
+        display: none;
+        margin: 0 0 22px;
+        background: var(--ink);
+        color: var(--paper);
+        padding: 22px 24px;
+        border: 3px solid var(--ink);
+        box-shadow: 6px 6px 0 var(--red);
+        position: relative;
+        overflow: hidden;
+      }
+      .score-card.show { display: block; }
+      .score-card .big {
+        font-family: var(--stack-display);
+        font-size: 72px;
+        line-height: 1;
+        letter-spacing: 0.02em;
+      }
+      .score-card .big .over { color: var(--red); }
+      .score-card .label {
+        font-family: var(--stack-mono);
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        margin-top: 6px;
+        opacity: 0.75;
+      }
+      .score-card .grade {
+        position: absolute;
+        right: 30px; top: 26px;
+        font-family: var(--stack-display);
+        font-size: 34px;
+        border: 3px solid var(--red);
+        color: var(--red);
+        padding: 6px 16px;
+        transform: rotate(8deg);
+        letter-spacing: 0.06em;
+      }
+
+      footer {
+        text-align: center;
+        font-family: var(--stack-mono);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        padding: 20px;
+      }
+
+      /* decorative stamps */
+      .stamp-dec {
+        position: absolute;
+        font-family: var(--stack-mono);
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--red);
+        border: 2px solid var(--red);
+        padding: 2px 7px;
+        transform: rotate(-10deg);
+        opacity: 0.75;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Model <span class="red">Metrics</span> <span class="slash">/</span> Playground</h1>
+      <div class="sub">CSDS 352 · Week 7 · Evaluation &amp; Validation</div>
+      <div class="stamp">CONFIDENTIAL · WK-7</div>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-view="regression"><span class="num">01</span>Regression</button>
+      <button class="tab" data-view="distances"><span class="num">02</span>Distances</button>
+      <button class="tab" data-view="classification"><span class="num">03</span>Classification</button>
+      <button class="tab" data-view="quiz"><span class="num">04</span>Validation Quiz</button>
+    </nav>
+
+    <main>
+      <!-- ============================== REGRESSION ============================== -->
+      <section id="view-regression" class="view active">
+        <div class="grid">
+          <div class="panel tilt-1">
+            <h2>Data &amp; <span class="red">Model</span></h2>
+            <p class="hint">
+              Click empty space to <b>add</b> a point · drag to <b>move</b> ·
+              shift-click to <b>delete</b> · drag the red line to change it
+            </p>
+            <svg id="reg-plot" class="plot" viewBox="0 0 720 480"></svg>
+            <div class="legend">
+              <span class="sw"><span class="dot round" style="background:var(--ink)"></span> actual yᵢ</span>
+              <span class="sw"><span class="dot" style="background:var(--red);border-color:var(--red)"></span> prediction ŷ</span>
+              <span class="sw"><span class="dot" style="background:var(--paper);border-style:dashed"></span> mean ȳ</span>
+              <span class="sw"><span class="dot" style="background:repeating-linear-gradient(45deg,var(--red) 0 3px,transparent 3px 6px);border-color:var(--red)"></span> residual</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel tilt-2">
+              <h2>Controls</h2>
+              <div class="control">
+                <label>Slope m <span class="value" id="reg-slope-val">1.00</span></label>
+                <input id="reg-slope" type="range" min="-3" max="3" step="0.01" value="1" />
+              </div>
+              <div class="control">
+                <label>Intercept b <span class="value" id="reg-intercept-val">0.00</span></label>
+                <input id="reg-intercept" type="range" min="-5" max="5" step="0.01" value="0" />
+              </div>
+              <div class="checkbox-row">
+                <label><input type="checkbox" id="reg-show-residuals" checked /> Residuals</label>
+                <label><input type="checkbox" id="reg-show-mean" checked /> Mean ȳ</label>
+                <label><input type="checkbox" id="reg-show-squares" /> Squares (MSE)</label>
+              </div>
+              <div class="toolbar">
+                <button class="btn primary" id="reg-fit">Best fit (OLS)</button>
+                <button class="btn" id="reg-reset">Reset line</button>
+                <button class="btn ghost" id="reg-clear">Clear</button>
+              </div>
+              <div class="section-title">Presets</div>
+              <div class="preset-row">
+                <button class="chip" data-reg-preset="perfect">Perfect</button>
+                <button class="chip" data-reg-preset="good">Good fit</button>
+                <button class="chip" data-reg-preset="noisy">Noisy</button>
+                <button class="chip red" data-reg-preset="outliers">Outliers</button>
+                <button class="chip" data-reg-preset="nonlinear">Non-linear</button>
+                <button class="chip" data-reg-preset="horizontal">No trend</button>
+              </div>
+            </div>
+
+            <div class="panel tilt-1">
+              <h2>Metrics</h2>
+              <div class="metrics">
+                <div class="metric tilt-a" id="reg-m-mse">
+                  <div class="name">MSE</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+                <div class="metric tilt-b" id="reg-m-rmse">
+                  <div class="name">RMSE</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+                <div class="metric tilt-c" id="reg-m-mae">
+                  <div class="name">MAE</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+                <div class="metric red tilt-d" id="reg-m-r2">
+                  <div class="name">R²</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="insight" id="reg-insight">
+                Add points and tug the line to see metrics react.
+              </div>
+            </div>
+
+            <div class="panel tilt-2">
+              <h2>Formulas</h2>
+              <div class="formula"><span class="lbl">MSE</span>(1/n) · Σ (yᵢ − ŷᵢ)²</div>
+              <div class="formula"><span class="lbl">RMSE</span>√ MSE</div>
+              <div class="formula"><span class="lbl">MAE</span>(1/n) · Σ |yᵢ − ŷᵢ|</div>
+              <div class="formula"><span class="lbl">R²</span>1 − Σ(yᵢ − ŷᵢ)² / Σ(yᵢ − ȳ)²</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================== DISTANCES ============================== -->
+      <section id="view-distances" class="view">
+        <div class="grid">
+          <div>
+            <div class="panel tilt-1">
+              <h2>Tensors <span class="red">y</span> and <span class="red">ŷ</span></h2>
+              <p class="hint">
+                A regression metric is a <b>distance between two tensors</b>: the
+                actual y and the prediction ŷ. Drag the <b>top</b> of any bar to
+                change its component value.
+              </p>
+              <svg id="dst-tensors" class="plot" viewBox="0 0 720 320"></svg>
+              <div class="legend">
+                <span class="sw"><span class="dot" style="background:var(--ink)"></span> yᵢ (actual)</span>
+                <span class="sw"><span class="dot" style="background:var(--red);border-color:var(--red)"></span> ŷᵢ (predicted)</span>
+                <span class="sw"><span class="dot" style="background:repeating-linear-gradient(45deg,var(--red) 0 3px,var(--paper) 3px 6px);border-color:var(--red)"></span> residual rᵢ = yᵢ − ŷᵢ</span>
+              </div>
+            </div>
+
+            <div class="panel tilt-2">
+              <h2>2D <span class="red">geometry</span> of distance</h2>
+              <p class="hint">
+                Using components <b>i = 0</b> and <b>i = 1</b>, the tensors become
+                two points on a plane. Each distance function draws a different
+                path between them.
+              </p>
+              <svg id="dst-2d" class="plot" viewBox="0 0 720 360"></svg>
+              <div class="legend">
+                <span class="sw"><span class="dot round" style="background:var(--ink)"></span> y</span>
+                <span class="sw"><span class="dot round" style="background:var(--red);border-color:var(--red)"></span> ŷ</span>
+                <span class="sw"><span class="dot" style="background:var(--red)"></span> L¹ staircase (Manhattan)</span>
+                <span class="sw"><span class="dot" style="background:var(--ink)"></span> L² line (Euclidean)</span>
+                <span class="sw"><span class="dot" style="background:repeating-linear-gradient(90deg,var(--ink) 0 3px,transparent 3px 6px)"></span> L∞ max (Chebyshev)</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel tilt-2">
+              <h2>Controls</h2>
+              <div class="control">
+                <label>Minkowski <code style="font-family:var(--stack-mono)">p</code> <span class="value" id="dst-p-val">2.0</span></label>
+                <input id="dst-p" type="range" min="1" max="10" step="0.1" value="2" />
+              </div>
+              <div class="checkbox-row">
+                <label><input type="checkbox" id="dst-show-residuals" checked /> Residuals</label>
+                <label><input type="checkbox" id="dst-show-squares" /> Squared residuals</label>
+              </div>
+              <div class="toolbar">
+                <button class="btn" id="dst-reset">Reset tensors</button>
+                <button class="btn ghost" id="dst-randomize">Randomize ŷ</button>
+              </div>
+              <div class="section-title">Presets</div>
+              <div class="preset-row">
+                <button class="chip" data-dst-preset="close">Close</button>
+                <button class="chip" data-dst-preset="uniform">Uniform offset</button>
+                <button class="chip red" data-dst-preset="outlier">One big error</button>
+                <button class="chip" data-dst-preset="opposite">Opposite</button>
+              </div>
+            </div>
+
+            <div class="panel tilt-1">
+              <h2>Distances</h2>
+              <div class="metrics">
+                <div class="metric tilt-a" id="dst-m-l1">
+                  <div class="name">L¹</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+                <div class="metric tilt-b" id="dst-m-l2">
+                  <div class="name">L²</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+                <div class="metric tilt-c" id="dst-m-linf">
+                  <div class="name">L∞</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+                <div class="metric red tilt-d" id="dst-m-lp">
+                  <div class="name">Lᵖ</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="section-title">Regression metrics (derived)</div>
+              <div class="metrics">
+                <div class="metric tilt-b" id="dst-m-mae">
+                  <div class="name">MAE = L¹/n</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+                <div class="metric tilt-a" id="dst-m-rmse">
+                  <div class="name">RMSE = L²/√n</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="insight" id="dst-insight">
+                MAE is the L¹ distance averaged; RMSE is the L² distance
+                re-scaled. Try the <b>outlier</b> preset to see why L² explodes
+                while L¹ barely flinches.
+              </div>
+            </div>
+
+            <div class="panel tilt-2">
+              <h2>Formulas</h2>
+              <div class="formula"><span class="lbl">L¹</span>Σ |yᵢ − ŷᵢ|</div>
+              <div class="formula"><span class="lbl">L²</span>√ Σ (yᵢ − ŷᵢ)²</div>
+              <div class="formula"><span class="lbl">L∞</span>maxᵢ |yᵢ − ŷᵢ|</div>
+              <div class="formula"><span class="lbl">Lᵖ</span>( Σ |yᵢ − ŷᵢ|ᵖ )^(1/p)</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================== CLASSIFICATION ============================== -->
+      <section id="view-classification" class="view">
+        <div class="grid">
+          <div class="panel tilt-1">
+            <h2>Scores &amp; <span class="red">threshold</span></h2>
+            <p class="hint">
+              Each dot = a sample. <b>Horizontal position</b> = predicted score.
+              <b>Row</b> = true label. Drag the threshold line to reclassify;
+              drag a dot to change its score.
+            </p>
+            <svg id="cls-plot" class="plot" viewBox="0 0 720 400"></svg>
+            <div class="legend">
+              <span class="sw"><span class="dot round" style="background:var(--ink)"></span> TP — filled black</span>
+              <span class="sw"><span class="dot round" style="background:var(--paper)"></span> TN — hollow black</span>
+              <span class="sw"><span class="dot round" style="background:var(--red);border-color:var(--red)"></span> FP — filled red</span>
+              <span class="sw"><span class="dot round" style="background:var(--paper);border-color:var(--red)"></span> FN — hollow red</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel tilt-2">
+              <h2>Threshold</h2>
+              <div class="control">
+                <label>Decision boundary <span class="value" id="cls-thr-val">0.50</span></label>
+                <input id="cls-thr" type="range" min="0" max="1" step="0.005" value="0.5" />
+              </div>
+              <div class="hint" style="margin-bottom:0">
+                Samples with score ≥ threshold are predicted <b>positive</b>.
+              </div>
+              <div class="section-title">Presets</div>
+              <div class="preset-row">
+                <button class="chip" data-cls-preset="balanced">Balanced</button>
+                <button class="chip" data-cls-preset="easy">Separated</button>
+                <button class="chip red" data-cls-preset="overlap">Heavy overlap</button>
+                <button class="chip red" data-cls-preset="imbalanced">Imbalanced</button>
+                <button class="chip" data-cls-preset="skew-pos">Biased high</button>
+                <button class="chip" data-cls-preset="skew-neg">Biased low</button>
+              </div>
+              <div class="toolbar" style="margin-top:12px">
+                <button class="btn" id="cls-regen">Regenerate</button>
+                <button class="btn ghost" id="cls-reset-thr">Reset threshold</button>
+              </div>
+            </div>
+
+            <div class="panel tilt-1">
+              <h2>Confusion <span class="red">matrix</span></h2>
+              <div class="cm">
+                <div></div>
+                <div class="lbl">Pred −</div>
+                <div class="lbl">Pred +</div>
+                <div class="lbl">Actual +</div>
+                <div class="cell fn" id="cm-fn">
+                  <div class="count">0</div>
+                  <div class="abbr">FN</div>
+                </div>
+                <div class="cell tp" id="cm-tp">
+                  <div class="count">0</div>
+                  <div class="abbr">TP</div>
+                </div>
+                <div class="lbl">Actual −</div>
+                <div class="cell tn" id="cm-tn">
+                  <div class="count">0</div>
+                  <div class="abbr">TN</div>
+                </div>
+                <div class="cell fp" id="cm-fp">
+                  <div class="count">0</div>
+                  <div class="abbr">FP</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel tilt-2">
+              <h2>Metrics</h2>
+              <div class="metrics">
+                <div class="metric tilt-a" id="cls-m-acc">
+                  <div class="name">Accuracy</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+                <div class="metric tilt-b" id="cls-m-prec">
+                  <div class="name">Precision</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+                <div class="metric tilt-c" id="cls-m-rec">
+                  <div class="name">Recall</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+                <div class="metric red tilt-d" id="cls-m-f1">
+                  <div class="name">F1</div>
+                  <div class="val">—</div>
+                  <div class="bar"><div style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="insight" id="cls-insight">
+                Move the threshold or try a preset to see precision and recall
+                trade off against each other.
+              </div>
+            </div>
+
+            <div class="panel tilt-1">
+              <h2>Formulas</h2>
+              <div class="formula"><span class="lbl">Acc</span>(TP + TN) / (TP + TN + FP + FN)</div>
+              <div class="formula"><span class="lbl">Prec</span>TP / (TP + FP)</div>
+              <div class="formula"><span class="lbl">Rec</span>TP / (TP + FN)</div>
+              <div class="formula"><span class="lbl">F1</span>2 · (Prec · Rec) / (Prec + Rec)</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================== QUIZ ============================== -->
+      <section id="view-quiz" class="view">
+        <div class="quiz-head">
+          <div>
+            <div class="panel tilt-1" style="display:inline-block;margin:0">
+              <h2>Validation <span class="red">Quiz</span></h2>
+              <div class="hint" style="margin:6px 0 0">
+                10 questions · pick one answer each · press <b>GRADE</b> to mark.
+              </div>
+            </div>
+          </div>
+          <span class="pill" id="quiz-progress">0 / 10 ANSWERED</span>
+        </div>
+
+        <div class="score-card" id="quiz-score">
+          <div class="big"><span id="quiz-score-n">0</span><span class="over"> / 10</span></div>
+          <div class="label" id="quiz-score-label">complete</div>
+          <div class="grade" id="quiz-grade">—</div>
+        </div>
+
+        <div id="quiz-container"></div>
+
+        <div class="toolbar" style="justify-content:center;margin-top:8px">
+          <button class="btn primary" id="quiz-grade-btn">Grade</button>
+          <button class="btn ghost" id="quiz-reset-btn">Reset</button>
+        </div>
+      </section>
+    </main>
+
+    <footer>CSDS 352 · DATA SCIENCE &amp; MACHINE LEARNING · WEEK 7</footer>
+
+    <script>
+      // --------------------------- TAB SWITCHING ---------------------------
+      document.querySelectorAll(".tab").forEach((t) => {
+        t.addEventListener("click", () => {
+          document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+          document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+          t.classList.add("active");
+          document.getElementById("view-" + t.dataset.view).classList.add("active");
+        });
+      });
+
+      // --------------------------- HELPERS ---------------------------
+      const fmt = (v, d = 3) => (Number.isFinite(v) ? v.toFixed(d) : "—");
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+      // =====================================================================
+      // REGRESSION PLAYGROUND
+      // =====================================================================
+      const REG = (() => {
+        const svg = document.getElementById("reg-plot");
+        const W = 720, H = 480;
+        const M = { l: 48, r: 20, t: 18, b: 38 };
+        const PW = W - M.l - M.r;
+        const PH = H - M.t - M.b;
+        const XMIN = 0, XMAX = 10, YMIN = 0, YMAX = 10;
+
+        const xToPx = (x) => M.l + ((x - XMIN) / (XMAX - XMIN)) * PW;
+        const yToPx = (y) => M.t + PH - ((y - YMIN) / (YMAX - YMIN)) * PH;
+        const pxToX = (px) => XMIN + ((px - M.l) / PW) * (XMAX - XMIN);
+        const pxToY = (py) => YMIN + ((M.t + PH - py) / PH) * (YMAX - YMIN);
+
+        let points = [];
+        let slope = 1, intercept = 0;
+        let dragging = null;
+        let draggingLine = null;
+
+        const slopeEl = document.getElementById("reg-slope");
+        const interceptEl = document.getElementById("reg-intercept");
+        const slopeValEl = document.getElementById("reg-slope-val");
+        const interceptValEl = document.getElementById("reg-intercept-val");
+
+        const showRes = document.getElementById("reg-show-residuals");
+        const showMean = document.getElementById("reg-show-mean");
+        const showSq = document.getElementById("reg-show-squares");
+
+        const presets = {
+          perfect: () => gen(12, (x) => 0.7 * x + 1, 0),
+          good: () => gen(15, (x) => 0.6 * x + 1.5, 0.6),
+          noisy: () => gen(20, (x) => 0.5 * x + 2, 1.8),
+          outliers: () => {
+            const p = gen(15, (x) => 0.5 * x + 2, 0.4);
+            p.push({ x: 8.5, y: 1.0 });
+            p.push({ x: 1.2, y: 9.2 });
+            return p;
+          },
+          nonlinear: () =>
+            gen(18, (x) => 0.5 + 0.1 * (x - 5) * (x - 5), 0.25),
+          horizontal: () => gen(14, () => 5, 1.2),
+        };
+
+        function gen(n, fn, noise) {
+          const out = [];
+          for (let i = 0; i < n; i++) {
+            const x = (XMAX - XMIN) * ((i + 0.5) / n) + XMIN;
+            const y = fn(x) + (Math.random() - 0.5) * 2 * noise;
+            out.push({
+              x: clamp(x, XMIN + 0.2, XMAX - 0.2),
+              y: clamp(y, YMIN + 0.2, YMAX - 0.2),
+            });
+          }
+          return out;
+        }
+
+        function ols() {
+          if (points.length < 2) return { m: 0, b: 0 };
+          const n = points.length;
+          const mx = points.reduce((a, p) => a + p.x, 0) / n;
+          const my = points.reduce((a, p) => a + p.y, 0) / n;
+          let num = 0, den = 0;
+          for (const p of points) {
+            num += (p.x - mx) * (p.y - my);
+            den += (p.x - mx) * (p.x - mx);
+          }
+          if (den === 0) return { m: 0, b: my };
+          const m = num / den;
+          return { m, b: my - m * mx };
+        }
+
+        function render() {
+          slopeValEl.textContent = slope.toFixed(2);
+          interceptValEl.textContent = intercept.toFixed(2);
+          const parts = [];
+
+          // grid
+          parts.push('<g stroke="rgba(11,11,11,0.10)" stroke-width="1">');
+          for (let x = XMIN; x <= XMAX; x++) {
+            parts.push(`<line x1="${xToPx(x)}" y1="${M.t}" x2="${xToPx(x)}" y2="${M.t + PH}"/>`);
+          }
+          for (let y = YMIN; y <= YMAX; y++) {
+            parts.push(`<line x1="${M.l}" y1="${yToPx(y)}" x2="${M.l + PW}" y2="${yToPx(y)}"/>`);
+          }
+          parts.push("</g>");
+
+          // axes
+          parts.push(`<g stroke="#0b0b0b" stroke-width="2" fill="none">
+            <line x1="${M.l}" y1="${M.t + PH}" x2="${M.l + PW}" y2="${M.t + PH}"/>
+            <line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t + PH}"/>
+          </g>`);
+          parts.push('<g font-family="Courier New, monospace" font-size="10" fill="#0b0b0b" text-anchor="middle">');
+          for (let x = XMIN; x <= XMAX; x++) parts.push(`<text x="${xToPx(x)}" y="${M.t + PH + 14}">${x}</text>`);
+          parts.push("</g>");
+          parts.push('<g font-family="Courier New, monospace" font-size="10" fill="#0b0b0b" text-anchor="end">');
+          for (let y = YMIN; y <= YMAX; y++) parts.push(`<text x="${M.l - 6}" y="${yToPx(y) + 3}">${y}</text>`);
+          parts.push("</g>");
+          parts.push(`<text x="${M.l + PW / 2}" y="${H - 6}" font-family="Impact, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" letter-spacing="2">X</text>`);
+          parts.push(`<text x="14" y="${M.t + PH / 2}" font-family="Impact, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" letter-spacing="2" transform="rotate(-90 14 ${M.t + PH / 2})">Y</text>`);
+
+          // mean line
+          if (showMean.checked && points.length > 0) {
+            const my = points.reduce((a, p) => a + p.y, 0) / points.length;
+            parts.push(`<line x1="${M.l}" y1="${yToPx(my)}" x2="${M.l + PW}" y2="${yToPx(my)}" stroke="#0b0b0b" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.5"/>`);
+            parts.push(`<text x="${M.l + PW - 4}" y="${yToPx(my) - 4}" font-family="Courier New, monospace" font-size="10" fill="#0b0b0b" text-anchor="end" opacity="0.7">ȳ = ${my.toFixed(2)}</text>`);
+          }
+
+          // squares
+          if (showSq.checked && points.length > 0) {
+            for (const p of points) {
+              const yhat = slope * p.x + intercept;
+              const sidePx = Math.abs(yToPx(yhat) - yToPx(p.y));
+              const x0 = xToPx(p.x);
+              const y0 = Math.min(yToPx(yhat), yToPx(p.y));
+              parts.push(`<rect x="${x0}" y="${y0}" width="${sidePx}" height="${sidePx}" fill="rgba(200,16,46,0.15)" stroke="#c8102e" stroke-width="1"/>`);
+            }
+          }
+
+          // residuals
+          if (showRes.checked) {
+            for (const p of points) {
+              const yhat = slope * p.x + intercept;
+              parts.push(`<line x1="${xToPx(p.x)}" y1="${yToPx(p.y)}" x2="${xToPx(p.x)}" y2="${yToPx(yhat)}" stroke="#c8102e" stroke-width="2" stroke-dasharray="3 3"/>`);
+            }
+          }
+
+          // regression line
+          function intersect() {
+            const pts = [
+              { x: XMIN, y: slope * XMIN + intercept },
+              { x: XMAX, y: slope * XMAX + intercept },
+            ];
+            if (slope !== 0) {
+              pts.push({ x: (YMIN - intercept) / slope, y: YMIN });
+              pts.push({ x: (YMAX - intercept) / slope, y: YMAX });
+            }
+            return pts.filter(
+              (p) => p.x >= XMIN - 1e-6 && p.x <= XMAX + 1e-6 && p.y >= YMIN - 1e-6 && p.y <= YMAX + 1e-6
+            );
+          }
+          const ins = intersect();
+          if (ins.length >= 2) {
+            ins.sort((a, b) => a.x - b.x);
+            const a = ins[0], b = ins[ins.length - 1];
+            parts.push(`<line class="reg-line" x1="${xToPx(a.x)}" y1="${yToPx(a.y)}" x2="${xToPx(b.x)}" y2="${yToPx(b.y)}" stroke="#c8102e" stroke-width="3.5" style="cursor:grab"/>`);
+          }
+
+          // points
+          for (let i = 0; i < points.length; i++) {
+            const p = points[i];
+            parts.push(`<circle class="reg-pt" data-i="${i}" cx="${xToPx(p.x)}" cy="${yToPx(p.y)}" r="6" fill="#0b0b0b" stroke="#efe7d4" stroke-width="2" style="cursor:grab"/>`);
+          }
+
+          svg.innerHTML = parts.join("");
+          bindSvg();
+          updateMetrics();
+        }
+
+        function updateMetrics() {
+          const n = points.length;
+          if (n === 0) {
+            setMetric("reg-m-mse", null, 0);
+            setMetric("reg-m-rmse", null, 0);
+            setMetric("reg-m-mae", null, 0);
+            setMetric("reg-m-r2", null, 0);
+            document.getElementById("reg-insight").textContent =
+              "Add points and tug the line to see metrics react.";
+            return;
+          }
+          let sse = 0, sae = 0, sst = 0;
+          const my = points.reduce((a, p) => a + p.y, 0) / n;
+          for (const p of points) {
+            const yhat = slope * p.x + intercept;
+            const e = p.y - yhat;
+            sse += e * e;
+            sae += Math.abs(e);
+            sst += (p.y - my) * (p.y - my);
+          }
+          const mse = sse / n;
+          const rmse = Math.sqrt(mse);
+          const mae = sae / n;
+          const r2 = sst === 0 ? NaN : 1 - sse / sst;
+
+          setMetric("reg-m-mse", mse, clamp(1 - mse / 10, 0, 1));
+          setMetric("reg-m-rmse", rmse, clamp(1 - rmse / 4, 0, 1));
+          setMetric("reg-m-mae", mae, clamp(1 - mae / 3, 0, 1));
+          setMetric("reg-m-r2", r2, clamp(r2, 0, 1));
+
+          const ins = document.getElementById("reg-insight");
+          if (!Number.isFinite(r2)) ins.innerHTML = "All y values are identical — R² is undefined.";
+          else if (r2 > 0.9) ins.innerHTML = `<b>Excellent fit.</b> The line explains ${(r2 * 100).toFixed(1)}% of the variance.`;
+          else if (r2 > 0.5) ins.innerHTML = `<b>Reasonable.</b> R² = ${r2.toFixed(3)}. RMSE penalizes large errors more than MAE — compare them to spot outliers.`;
+          else if (r2 > 0) ins.innerHTML = `<b>Weak model.</b> R² = ${r2.toFixed(3)}: barely better than the mean.`;
+          else ins.innerHTML = `<b>Worse than the mean.</b> R² = ${r2.toFixed(3)} — predicting ȳ would beat this line.`;
+        }
+
+        function setMetric(id, val, frac) {
+          const el = document.getElementById(id);
+          el.querySelector(".val").textContent = val === null ? "—" : fmt(val, 3);
+          el.querySelector(".bar > div").style.width = (clamp(frac, 0, 1) * 100).toFixed(1) + "%";
+        }
+
+        function bindSvg() {
+          svg.querySelectorAll(".reg-pt").forEach((c) => {
+            c.addEventListener("pointerdown", (ev) => {
+              ev.stopPropagation();
+              const i = +c.dataset.i;
+              if (ev.shiftKey) { points.splice(i, 1); render(); return; }
+              dragging = { i };
+              c.setPointerCapture(ev.pointerId);
+            });
+          });
+          const line = svg.querySelector(".reg-line");
+          if (line) {
+            line.addEventListener("pointerdown", (ev) => {
+              ev.stopPropagation();
+              draggingLine = true;
+              line.setPointerCapture(ev.pointerId);
+            });
+          }
+        }
+
+        function svgPoint(ev) {
+          const r = svg.getBoundingClientRect();
+          const x = ((ev.clientX - r.left) / r.width) * W;
+          const y = ((ev.clientY - r.top) / r.height) * H;
+          return { x, y, dataX: pxToX(x), dataY: pxToY(y) };
+        }
+
+        svg.addEventListener("pointerdown", (ev) => {
+          if (ev.target !== svg) return;
+          const p = svgPoint(ev);
+          if (p.dataX >= XMIN && p.dataX <= XMAX && p.dataY >= YMIN && p.dataY <= YMAX) {
+            points.push({ x: clamp(p.dataX, XMIN, XMAX), y: clamp(p.dataY, YMIN, YMAX) });
+            render();
+          }
+        });
+        svg.addEventListener("pointermove", (ev) => {
+          if (dragging) {
+            const p = svgPoint(ev);
+            points[dragging.i] = { x: clamp(p.dataX, XMIN, XMAX), y: clamp(p.dataY, YMIN, YMAX) };
+            render();
+          } else if (draggingLine) {
+            const p = svgPoint(ev);
+            if (ev.shiftKey) {
+              const newSlope = (p.dataY - intercept) / (p.dataX || 0.0001);
+              slope = clamp(newSlope, -3, 3);
+              slopeEl.value = slope;
+            } else {
+              intercept = clamp(p.dataY - slope * p.dataX, -5, 5);
+              interceptEl.value = intercept;
+            }
+            render();
+          }
+        });
+        svg.addEventListener("pointerup", () => { dragging = null; draggingLine = null; });
+        svg.addEventListener("pointerleave", () => { dragging = null; draggingLine = null; });
+
+        slopeEl.addEventListener("input", () => { slope = +slopeEl.value; render(); });
+        interceptEl.addEventListener("input", () => { intercept = +interceptEl.value; render(); });
+        showRes.addEventListener("change", render);
+        showMean.addEventListener("change", render);
+        showSq.addEventListener("change", render);
+
+        document.getElementById("reg-fit").addEventListener("click", () => {
+          const { m, b } = ols();
+          slope = clamp(m, -3, 3);
+          intercept = clamp(b, -5, 5);
+          slopeEl.value = slope; interceptEl.value = intercept;
+          render();
+        });
+        document.getElementById("reg-reset").addEventListener("click", () => {
+          slope = 1; intercept = 0;
+          slopeEl.value = 1; interceptEl.value = 0;
+          render();
+        });
+        document.getElementById("reg-clear").addEventListener("click", () => { points = []; render(); });
+        document.querySelectorAll("[data-reg-preset]").forEach((b) => {
+          b.addEventListener("click", () => { points = presets[b.dataset.regPreset](); render(); });
+        });
+
+        points = presets.good();
+        render();
+        return { render };
+      })();
+
+      // =====================================================================
+      // DISTANCES PLAYGROUND
+      // =====================================================================
+      const DST = (() => {
+        const N = 6;
+        const VMIN = 0, VMAX = 10;
+
+        // two tensors
+        let y    = [8.0, 5.5, 7.2, 3.8, 6.1, 4.5];
+        let yhat = [7.2, 6.0, 6.5, 4.2, 5.5, 5.1];
+        let p = 2;
+
+        const pEl = document.getElementById("dst-p");
+        const pValEl = document.getElementById("dst-p-val");
+        const showRes = document.getElementById("dst-show-residuals");
+        const showSq = document.getElementById("dst-show-squares");
+
+        // ---------- tensor bars SVG ----------
+        const svgT = document.getElementById("dst-tensors");
+        const TW = 720, TH = 320;
+        const TM = { l: 46, r: 20, t: 18, b: 40 };
+        const TPW = TW - TM.l - TM.r;
+        const TPH = TH - TM.t - TM.b;
+        const BAR_GROUP_W = TPW / N; // per component
+        const BAR_W = BAR_GROUP_W * 0.28;
+
+        const vToY = (v) => TM.t + TPH - ((v - VMIN) / (VMAX - VMIN)) * TPH;
+        const yToV = (py) => VMIN + ((TM.t + TPH - py) / TPH) * (VMAX - VMIN);
+
+        let dragT = null; // {which: 'y'|'yhat', i}
+
+        function renderTensors() {
+          const parts = [];
+          // axis
+          parts.push(`<line x1="${TM.l}" y1="${TM.t + TPH}" x2="${TM.l + TPW}" y2="${TM.t + TPH}" stroke="#0b0b0b" stroke-width="2"/>`);
+          parts.push(`<line x1="${TM.l}" y1="${TM.t}" x2="${TM.l}" y2="${TM.t + TPH}" stroke="#0b0b0b" stroke-width="2"/>`);
+          // y ticks
+          parts.push('<g font-family="Courier New, monospace" font-size="10" fill="#0b0b0b" text-anchor="end">');
+          for (let v = 0; v <= 10; v += 2) {
+            parts.push(`<text x="${TM.l - 6}" y="${vToY(v) + 3}">${v}</text>`);
+            parts.push(`<line x1="${TM.l - 3}" y1="${vToY(v)}" x2="${TM.l}" y2="${vToY(v)}" stroke="#0b0b0b"/>`);
+          }
+          parts.push("</g>");
+
+          for (let i = 0; i < N; i++) {
+            const cx = TM.l + BAR_GROUP_W * (i + 0.5);
+            const xY = cx - BAR_W - 2;
+            const xYh = cx + 2;
+            const yY = vToY(y[i]);
+            const yYh = vToY(yhat[i]);
+            const base = TM.t + TPH;
+
+            // y bar (black, solid)
+            parts.push(`<rect x="${xY}" y="${yY}" width="${BAR_W}" height="${base - yY}" fill="#0b0b0b"/>`);
+            parts.push(`<rect class="dst-drag" data-w="y" data-i="${i}" x="${xY - 2}" y="${yY - 8}" width="${BAR_W + 4}" height="16" fill="transparent" style="cursor:ns-resize"/>`);
+            // yhat bar (red)
+            parts.push(`<rect x="${xYh}" y="${yYh}" width="${BAR_W}" height="${base - yYh}" fill="#c8102e"/>`);
+            parts.push(`<rect class="dst-drag" data-w="yhat" data-i="${i}" x="${xYh - 2}" y="${yYh - 8}" width="${BAR_W + 4}" height="16" fill="transparent" style="cursor:ns-resize"/>`);
+
+            // residual link
+            if (showRes.checked) {
+              parts.push(`<line x1="${cx}" y1="${yY}" x2="${cx}" y2="${yYh}" stroke="#c8102e" stroke-width="2" stroke-dasharray="3 3"/>`);
+            }
+            // squared residual square (area ∝ (y-yhat)²)
+            if (showSq.checked) {
+              const r = Math.abs(y[i] - yhat[i]);
+              const side = (r / (VMAX - VMIN)) * TPH;
+              const sx = cx - side / 2;
+              const sy = Math.min(yY, yYh) - (side - Math.abs(yY - yYh));
+              parts.push(`<rect x="${sx}" y="${sy}" width="${side}" height="${side}" fill="rgba(200,16,46,0.12)" stroke="#c8102e" stroke-width="1"/>`);
+            }
+
+            // component label
+            parts.push(`<text x="${cx}" y="${base + 16}" font-family="Courier New, monospace" font-size="11" fill="#0b0b0b" text-anchor="middle">i=${i}</text>`);
+            // residual value stamp
+            const rv = (y[i] - yhat[i]).toFixed(2);
+            parts.push(`<text x="${cx}" y="${TM.t - 4}" font-family="Impact, sans-serif" font-size="11" fill="#c8102e" text-anchor="middle" letter-spacing="1">${rv}</text>`);
+          }
+          // title label
+          parts.push(`<text x="${TM.l + TPW - 4}" y="${TM.t + 12}" font-family="Impact, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="end" letter-spacing="1">RESIDUAL rᵢ</text>`);
+
+          svgT.innerHTML = parts.join("");
+          bindT();
+        }
+
+        function bindT() {
+          svgT.querySelectorAll(".dst-drag").forEach((el) => {
+            el.addEventListener("pointerdown", (ev) => {
+              ev.stopPropagation();
+              dragT = { which: el.dataset.w, i: +el.dataset.i };
+              el.setPointerCapture(ev.pointerId);
+            });
+          });
+        }
+        function tsvgPoint(ev) {
+          const r = svgT.getBoundingClientRect();
+          const x = ((ev.clientX - r.left) / r.width) * TW;
+          const y = ((ev.clientY - r.top) / r.height) * TH;
+          return { x, y };
+        }
+        svgT.addEventListener("pointermove", (ev) => {
+          if (!dragT) return;
+          const p = tsvgPoint(ev);
+          const v = clamp(yToV(p.y), VMIN, VMAX);
+          if (dragT.which === "y") y[dragT.i] = v;
+          else yhat[dragT.i] = v;
+          renderAll();
+        });
+        // allow dragging from whole bar body too — click on bar top area
+        svgT.addEventListener("pointerdown", (ev) => {
+          if (ev.target !== svgT) return;
+          const p = tsvgPoint(ev);
+          // find nearest component group
+          const i = clamp(Math.floor((p.x - TM.l) / BAR_GROUP_W), 0, N - 1);
+          const cx = TM.l + BAR_GROUP_W * (i + 0.5);
+          const which = p.x < cx ? "y" : "yhat";
+          dragT = { which, i };
+          svgT.setPointerCapture(ev.pointerId);
+          const v = clamp(yToV(p.y), VMIN, VMAX);
+          if (which === "y") y[i] = v; else yhat[i] = v;
+          renderAll();
+        });
+        svgT.addEventListener("pointerup", () => { dragT = null; });
+        svgT.addEventListener("pointerleave", () => { dragT = null; });
+
+        // ---------- 2D SVG ----------
+        const svg2 = document.getElementById("dst-2d");
+        const SW = 720, SH = 360;
+        const SM = { l: 48, r: 180, t: 20, b: 40 };
+        const SPW = SW - SM.l - SM.r;
+        const SPH = SH - SM.t - SM.b;
+        const AMIN = 0, AMAX = 10;
+        const aToPx = (a) => SM.l + ((a - AMIN) / (AMAX - AMIN)) * SPW;
+        const bToPy = (b) => SM.t + SPH - ((b - AMIN) / (AMAX - AMIN)) * SPH;
+
+        function render2D() {
+          const parts = [];
+          // grid
+          parts.push('<g stroke="rgba(11,11,11,0.08)" stroke-width="1">');
+          for (let v = 0; v <= 10; v++) {
+            parts.push(`<line x1="${aToPx(v)}" y1="${SM.t}" x2="${aToPx(v)}" y2="${SM.t + SPH}"/>`);
+            parts.push(`<line x1="${SM.l}" y1="${bToPy(v)}" x2="${SM.l + SPW}" y2="${bToPy(v)}"/>`);
+          }
+          parts.push("</g>");
+
+          // axes
+          parts.push(`<line x1="${SM.l}" y1="${SM.t + SPH}" x2="${SM.l + SPW}" y2="${SM.t + SPH}" stroke="#0b0b0b" stroke-width="2"/>`);
+          parts.push(`<line x1="${SM.l}" y1="${SM.t}" x2="${SM.l}" y2="${SM.t + SPH}" stroke="#0b0b0b" stroke-width="2"/>`);
+          parts.push(`<text x="${SM.l + SPW / 2}" y="${SH - 6}" font-family="Impact, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" letter-spacing="1">component i=0</text>`);
+          parts.push(`<text x="16" y="${SM.t + SPH / 2}" font-family="Impact, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" letter-spacing="1" transform="rotate(-90 16 ${SM.t + SPH / 2})">component i=1</text>`);
+
+          const yx = y[0], yy = y[1];
+          const hx = yhat[0], hy = yhat[1];
+
+          // L∞ rectangle — axis aligned bounding box between points
+          const x1 = Math.min(yx, hx), x2 = Math.max(yx, hx);
+          const y1 = Math.min(yy, hy), y2 = Math.max(yy, hy);
+          parts.push(`<rect x="${aToPx(x1)}" y="${bToPy(y2)}" width="${aToPx(x2) - aToPx(x1)}" height="${bToPy(y1) - bToPy(y2)}" fill="none" stroke="#0b0b0b" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6"/>`);
+
+          // L1 staircase — two paths, highlight the relevant
+          parts.push(`<path d="M ${aToPx(yx)} ${bToPy(yy)} L ${aToPx(hx)} ${bToPy(yy)} L ${aToPx(hx)} ${bToPy(hy)}" stroke="#c8102e" stroke-width="3" fill="none" opacity="0.85"/>`);
+
+          // L2 line
+          parts.push(`<line x1="${aToPx(yx)}" y1="${bToPy(yy)}" x2="${aToPx(hx)}" y2="${bToPy(hy)}" stroke="#0b0b0b" stroke-width="3"/>`);
+
+          // points
+          parts.push(`<circle cx="${aToPx(yx)}" cy="${bToPy(yy)}" r="8" fill="#0b0b0b" stroke="#efe7d4" stroke-width="2"/>`);
+          parts.push(`<text x="${aToPx(yx) + 12}" y="${bToPy(yy) - 6}" font-family="Impact, sans-serif" font-size="14" fill="#0b0b0b" letter-spacing="1">y</text>`);
+          parts.push(`<circle cx="${aToPx(hx)}" cy="${bToPy(hy)}" r="8" fill="#c8102e" stroke="#efe7d4" stroke-width="2"/>`);
+          parts.push(`<text x="${aToPx(hx) + 12}" y="${bToPy(hy) - 6}" font-family="Impact, sans-serif" font-size="14" fill="#c8102e" letter-spacing="1">ŷ</text>`);
+
+          // ---- unit ball inset ----
+          const cx = SM.l + SPW + 34;
+          const cy = SM.t + 80;
+          const R = 64;
+          parts.push(`<rect x="${cx - R - 10}" y="${cy - R - 22}" width="${2 * R + 20}" height="${2 * R + 44}" fill="#efe7d4" stroke="#0b0b0b" stroke-width="2"/>`);
+          parts.push(`<text x="${cx}" y="${cy - R - 8}" font-family="Impact, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" letter-spacing="1">Lᵖ UNIT BALL</text>`);
+          parts.push(`<line x1="${cx - R}" y1="${cy}" x2="${cx + R}" y2="${cy}" stroke="#0b0b0b" stroke-width="1" opacity="0.3"/>`);
+          parts.push(`<line x1="${cx}" y1="${cy - R}" x2="${cx}" y2="${cy + R}" stroke="#0b0b0b" stroke-width="1" opacity="0.3"/>`);
+          // compute unit ball for this p: {(a,b): |a|^p + |b|^p <= 1}
+          const pts = [];
+          const STEPS = 120;
+          for (let i = 0; i <= STEPS; i++) {
+            const th = (i / STEPS) * 2 * Math.PI;
+            const cth = Math.cos(th), sth = Math.sin(th);
+            // solve r such that (|r cth|^p + |r sth|^p) = 1
+            // r = 1 / (|cth|^p + |sth|^p)^(1/p)
+            const denom = Math.pow(Math.pow(Math.abs(cth), p) + Math.pow(Math.abs(sth), p), 1 / p);
+            const r = denom === 0 ? R : 1 / denom;
+            pts.push([cx + r * R * cth, cy - r * R * sth]);
+          }
+          parts.push(`<path d="${pts.map((p, i) => (i === 0 ? "M" : "L") + p[0] + " " + p[1]).join(" ")} Z" fill="rgba(200,16,46,0.18)" stroke="#c8102e" stroke-width="2"/>`);
+          parts.push(`<text x="${cx}" y="${cy + R + 16}" font-family="Courier New, monospace" font-size="11" fill="#0b0b0b" text-anchor="middle">p = ${p.toFixed(1)}</text>`);
+
+          // annotations for path distances
+          // L2
+          const mx = (yx + hx) / 2, my2 = (yy + hy) / 2;
+          const l2d = Math.sqrt((yx - hx) ** 2 + (yy - hy) ** 2);
+          parts.push(`<text x="${aToPx(mx) + 8}" y="${bToPy(my2) + 4}" font-family="Courier New, monospace" font-size="11" fill="#0b0b0b" font-weight="700">L²=${l2d.toFixed(2)}</text>`);
+          // L1 label on horizontal leg
+          const l1d = Math.abs(yx - hx) + Math.abs(yy - hy);
+          parts.push(`<text x="${(aToPx(yx) + aToPx(hx)) / 2}" y="${bToPy(yy) - 6}" font-family="Courier New, monospace" font-size="11" fill="#c8102e" text-anchor="middle" font-weight="700">L¹=${l1d.toFixed(2)}</text>`);
+          // L∞
+          const linfd = Math.max(Math.abs(yx - hx), Math.abs(yy - hy));
+          parts.push(`<text x="${aToPx(x2) + 6}" y="${bToPy((y1 + y2) / 2)}" font-family="Courier New, monospace" font-size="11" fill="#0b0b0b" font-weight="700">L∞=${linfd.toFixed(2)}</text>`);
+
+          svg2.innerHTML = parts.join("");
+        }
+
+        // ---------- metrics ----------
+        function distances() {
+          let s1 = 0, s2 = 0, sp = 0, mx = 0;
+          for (let i = 0; i < N; i++) {
+            const d = Math.abs(y[i] - yhat[i]);
+            s1 += d;
+            s2 += d * d;
+            sp += Math.pow(d, p);
+            if (d > mx) mx = d;
+          }
+          return {
+            l1: s1,
+            l2: Math.sqrt(s2),
+            linf: mx,
+            lp: Math.pow(sp, 1 / p),
+            mae: s1 / N,
+            rmse: Math.sqrt(s2 / N),
+          };
+        }
+
+        function setM(id, val, frac) {
+          const el = document.getElementById(id);
+          el.querySelector(".val").textContent = fmt(val, 3);
+          el.querySelector(".bar > div").style.width = (clamp(frac, 0, 1) * 100).toFixed(1) + "%";
+        }
+
+        function renderMetrics() {
+          const d = distances();
+          // scale: if all components max out at 10 over 6 comps, L1 ≤ 60, L2 ≤ ~24, L∞ ≤ 10
+          setM("dst-m-l1", d.l1, d.l1 / 30);
+          setM("dst-m-l2", d.l2, d.l2 / 12);
+          setM("dst-m-linf", d.linf, d.linf / 10);
+          setM("dst-m-lp", d.lp, d.lp / 12);
+          setM("dst-m-mae", d.mae, d.mae / 5);
+          setM("dst-m-rmse", d.rmse, d.rmse / 5);
+
+          const ins = document.getElementById("dst-insight");
+          const ratio = d.l1 === 0 ? 1 : d.linf / d.l1;
+          if (d.l1 < 0.001) ins.innerHTML = `<b>Tensors coincide.</b> All distances collapse to zero — the prediction is perfect.`;
+          else if (ratio > 0.7) ins.innerHTML = `<b>One component dominates.</b> L∞ ≈ L¹ means almost all of the error sits in a single coordinate. Euclidean RMSE will punish this much more than MAE.`;
+          else ins.innerHTML = `<b>Error spread across components.</b> L¹, L², L∞ stay close because no single residual dominates.`;
+        }
+
+        function renderAll() { renderTensors(); render2D(); renderMetrics(); }
+
+        // ---------- events ----------
+        pEl.addEventListener("input", () => { p = +pEl.value; pValEl.textContent = p.toFixed(1); renderAll(); });
+        showRes.addEventListener("change", renderAll);
+        showSq.addEventListener("change", renderAll);
+
+        const presets = {
+          close: () => { y = [5,5,5,5,5,5]; yhat = [5.2,4.8,5.1,4.9,5.1,4.9]; },
+          uniform: () => { y = [6,6,6,6,6,6]; yhat = [4,4,4,4,4,4]; },
+          outlier: () => { y = [5,5,5,5,5,5]; yhat = [5.1,4.9,5,5,5,9.5]; },
+          opposite: () => { y = [8,2,8,2,8,2]; yhat = [2,8,2,8,2,8]; },
+        };
+        document.querySelectorAll("[data-dst-preset]").forEach((b) => {
+          b.addEventListener("click", () => { presets[b.dataset.dstPreset](); renderAll(); });
+        });
+        document.getElementById("dst-reset").addEventListener("click", () => {
+          y    = [8.0, 5.5, 7.2, 3.8, 6.1, 4.5];
+          yhat = [7.2, 6.0, 6.5, 4.2, 5.5, 5.1];
+          renderAll();
+        });
+        document.getElementById("dst-randomize").addEventListener("click", () => {
+          for (let i = 0; i < N; i++) yhat[i] = clamp(y[i] + (Math.random() - 0.5) * 4, VMIN, VMAX);
+          renderAll();
+        });
+
+        renderAll();
+        return { renderAll };
+      })();
+
+      // =====================================================================
+      // CLASSIFICATION PLAYGROUND
+      // =====================================================================
+      const CLS = (() => {
+        const svg = document.getElementById("cls-plot");
+        const W = 720, H = 400;
+        const M = { l: 62, r: 20, t: 36, b: 44 };
+        const PW = W - M.l - M.r;
+        const PH = H - M.t - M.b;
+        const sToPx = (s) => M.l + s * PW;
+        const pxToS = (px) => clamp((px - M.l) / PW, 0, 1);
+        const rowY = { pos: M.t + PH * 0.28, neg: M.t + PH * 0.78 };
+
+        let samples = [];
+        let threshold = 0.5;
+        let dragging = null;
+        let draggingThr = false;
+
+        const thrEl = document.getElementById("cls-thr");
+        const thrValEl = document.getElementById("cls-thr-val");
+
+        function gauss() {
+          const u = 1 - Math.random(), v = 1 - Math.random();
+          return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+        }
+        function gen(nPos, nNeg, muPos, muNeg, sigma) {
+          const out = [];
+          for (let i = 0; i < nPos; i++) out.push({ label: 1, score: clamp(muPos + sigma * gauss(), 0.01, 0.99) });
+          for (let i = 0; i < nNeg; i++) out.push({ label: 0, score: clamp(muNeg + sigma * gauss(), 0.01, 0.99) });
+          return out;
+        }
+        const presets = {
+          balanced:    () => gen(20, 20, 0.70, 0.30, 0.15),
+          easy:        () => gen(20, 20, 0.82, 0.18, 0.08),
+          overlap:     () => gen(22, 22, 0.58, 0.42, 0.18),
+          imbalanced:  () => gen(6,  34, 0.70, 0.30, 0.15),
+          "skew-pos":  () => gen(20, 20, 0.80, 0.55, 0.12),
+          "skew-neg":  () => gen(20, 20, 0.45, 0.20, 0.12),
+        };
+
+        function classify() {
+          let tp = 0, tn = 0, fp = 0, fn = 0;
+          for (const s of samples) {
+            const pred = s.score >= threshold ? 1 : 0;
+            if (pred === 1 && s.label === 1) tp++;
+            else if (pred === 0 && s.label === 0) tn++;
+            else if (pred === 1 && s.label === 0) fp++;
+            else fn++;
+          }
+          return { tp, tn, fp, fn };
+        }
+        function kindOf(s) {
+          const pred = s.score >= threshold ? 1 : 0;
+          if (pred === 1 && s.label === 1) return "tp";
+          if (pred === 0 && s.label === 0) return "tn";
+          if (pred === 1 && s.label === 0) return "fp";
+          return "fn";
+        }
+
+        function render() {
+          thrValEl.textContent = threshold.toFixed(2);
+          const parts = [];
+          parts.push(`<line x1="${M.l}" y1="${M.t + PH - 6}" x2="${M.l + PW}" y2="${M.t + PH - 6}" stroke="#0b0b0b" stroke-width="2"/>`);
+          for (let i = 0; i <= 10; i++) {
+            const x = sToPx(i / 10);
+            parts.push(`<line x1="${x}" y1="${M.t + PH - 6}" x2="${x}" y2="${M.t + PH - 2}" stroke="#0b0b0b"/>`);
+            parts.push(`<text x="${x}" y="${M.t + PH + 14}" font-family="Courier New, monospace" font-size="10" fill="#0b0b0b" text-anchor="middle">${(i / 10).toFixed(1)}</text>`);
+          }
+          parts.push(`<text x="${M.l + PW / 2}" y="${H - 8}" font-family="Impact, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="middle" letter-spacing="1">PREDICTED SCORE</text>`);
+          parts.push(`<text x="${M.l - 10}" y="${rowY.pos + 4}" font-family="Impact, sans-serif" font-size="13" fill="#0b0b0b" text-anchor="end" letter-spacing="1">ACTUAL +</text>`);
+          parts.push(`<text x="${M.l - 10}" y="${rowY.neg + 4}" font-family="Impact, sans-serif" font-size="13" fill="#c8102e" text-anchor="end" letter-spacing="1">ACTUAL −</text>`);
+          parts.push(`<line x1="${M.l}" y1="${rowY.pos}" x2="${M.l + PW}" y2="${rowY.pos}" stroke="#0b0b0b" stroke-width="1" opacity="0.18"/>`);
+          parts.push(`<line x1="${M.l}" y1="${rowY.neg}" x2="${M.l + PW}" y2="${rowY.neg}" stroke="#0b0b0b" stroke-width="1" opacity="0.18"/>`);
+
+          const tx = sToPx(threshold);
+          parts.push(`<rect x="${tx}" y="${M.t}" width="${M.l + PW - tx}" height="${PH - 6}" fill="rgba(200,16,46,0.08)"/>`);
+          parts.push(`<text x="${M.l + 8}" y="${M.t + 18}" font-family="Impact, sans-serif" font-size="13" fill="#0b0b0b" letter-spacing="1">PREDICT −</text>`);
+          parts.push(`<text x="${M.l + PW - 8}" y="${M.t + 18}" font-family="Impact, sans-serif" font-size="13" fill="#c8102e" text-anchor="end" letter-spacing="1">PREDICT +</text>`);
+          parts.push(`<line class="cls-thr-line" x1="${tx}" y1="${M.t}" x2="${tx}" y2="${M.t + PH - 6}" stroke="#0b0b0b" stroke-width="2.5" stroke-dasharray="6 4" style="cursor:ew-resize"/>`);
+          parts.push(`<polygon class="cls-thr-handle" points="${tx - 7},${M.t - 10} ${tx + 7},${M.t - 10} ${tx},${M.t - 1}" fill="#c8102e" style="cursor:ew-resize"/>`);
+
+          for (let i = 0; i < samples.length; i++) {
+            const s = samples[i];
+            const k = kindOf(s);
+            const x = sToPx(s.score);
+            const y = s.label === 1 ? rowY.pos : rowY.neg;
+            let fill, stroke;
+            if (k === "tp") { fill = "#0b0b0b"; stroke = "#0b0b0b"; }
+            else if (k === "tn") { fill = "#efe7d4"; stroke = "#0b0b0b"; }
+            else if (k === "fp") { fill = "#c8102e"; stroke = "#c8102e"; }
+            else { fill = "#efe7d4"; stroke = "#c8102e"; }
+            parts.push(`<circle class="cls-pt" data-i="${i}" cx="${x}" cy="${y}" r="7" fill="${fill}" stroke="${stroke}" stroke-width="2.5" style="cursor:grab"/>`);
+          }
+          svg.innerHTML = parts.join("");
+          bindSvg();
+          updateMetrics();
+        }
+
+        function updateMetrics() {
+          const { tp, tn, fp, fn } = classify();
+          document.querySelector("#cm-tp .count").textContent = tp;
+          document.querySelector("#cm-tn .count").textContent = tn;
+          document.querySelector("#cm-fp .count").textContent = fp;
+          document.querySelector("#cm-fn .count").textContent = fn;
+          const total = tp + tn + fp + fn;
+          const acc = total === 0 ? NaN : (tp + tn) / total;
+          const prec = tp + fp === 0 ? NaN : tp / (tp + fp);
+          const rec = tp + fn === 0 ? NaN : tp / (tp + fn);
+          const f1 = !Number.isFinite(prec) || !Number.isFinite(rec) || prec + rec === 0
+            ? NaN : (2 * prec * rec) / (prec + rec);
+
+          setMetric("cls-m-acc", acc);
+          setMetric("cls-m-prec", prec);
+          setMetric("cls-m-rec", rec);
+          setMetric("cls-m-f1", f1);
+
+          const ins = document.getElementById("cls-insight");
+          const pctPos = samples.length ? samples.filter((s) => s.label === 1).length / samples.length : 0;
+          let msg;
+          if (!Number.isFinite(prec) && !Number.isFinite(rec)) msg = "No predictions — move the threshold.";
+          else if (!Number.isFinite(prec)) msg = `<b>Threshold too high.</b> Never predicts positive — precision undefined.`;
+          else if (rec === 0) msg = `<b>Threshold too high.</b> Recall = 0: every positive is missed.`;
+          else if (prec < 0.6 && rec > 0.9) msg = `<b>Low threshold.</b> Catches most positives but flags many negatives (low precision).`;
+          else if (prec > 0.9 && rec < 0.6) msg = `<b>High threshold.</b> When it says + it's usually right, but it misses many positives.`;
+          else if (pctPos < 0.2 && Number.isFinite(acc) && acc > 0.85) msg = `<b>Imbalanced-data trap.</b> Accuracy ${(acc * 100).toFixed(1)}% — "always negative" would score almost the same. Trust F1.`;
+          else if (Number.isFinite(f1) && f1 > 0.85) msg = `<b>Well balanced.</b> F1 = ${f1.toFixed(3)}.`;
+          else msg = `Precision & recall trade off as you slide the threshold. F1 combines them.`;
+          ins.innerHTML = msg;
+        }
+        function setMetric(id, v) {
+          const el = document.getElementById(id);
+          el.querySelector(".val").textContent = fmt(v, 3);
+          el.querySelector(".bar > div").style.width = (clamp(v || 0, 0, 1) * 100).toFixed(1) + "%";
+        }
+
+        function svgPoint(ev) {
+          const r = svg.getBoundingClientRect();
+          const x = ((ev.clientX - r.left) / r.width) * W;
+          const y = ((ev.clientY - r.top) / r.height) * H;
+          return { x, y };
+        }
+        function bindSvg() {
+          svg.querySelectorAll(".cls-pt").forEach((c) => {
+            c.addEventListener("pointerdown", (ev) => {
+              ev.stopPropagation();
+              const i = +c.dataset.i;
+              if (ev.shiftKey) { samples.splice(i, 1); render(); return; }
+              dragging = { i };
+              c.setPointerCapture(ev.pointerId);
+            });
+          });
+          [svg.querySelector(".cls-thr-handle"), svg.querySelector(".cls-thr-line")].forEach((el) => {
+            if (!el) return;
+            el.addEventListener("pointerdown", (ev) => {
+              ev.stopPropagation();
+              draggingThr = true;
+              el.setPointerCapture(ev.pointerId);
+            });
+          });
+        }
+        svg.addEventListener("pointermove", (ev) => {
+          if (dragging) {
+            samples[dragging.i].score = pxToS(svgPoint(ev).x);
+            render();
+          } else if (draggingThr) {
+            threshold = pxToS(svgPoint(ev).x);
+            thrEl.value = threshold;
+            render();
+          }
+        });
+        svg.addEventListener("pointerup", () => { dragging = null; draggingThr = false; });
+        svg.addEventListener("pointerleave", () => { dragging = null; draggingThr = false; });
+
+        thrEl.addEventListener("input", () => { threshold = +thrEl.value; render(); });
+        document.getElementById("cls-reset-thr").addEventListener("click", () => { threshold = 0.5; thrEl.value = 0.5; render(); });
+        document.getElementById("cls-regen").addEventListener("click", () => { samples = presets.balanced(); render(); });
+        document.querySelectorAll("[data-cls-preset]").forEach((b) => {
+          b.addEventListener("click", () => { samples = presets[b.dataset.clsPreset](); render(); });
+        });
+
+        samples = presets.balanced();
+        render();
+        return { render };
+      })();
+
+      // =====================================================================
+      // QUIZ
+      // =====================================================================
+      const QUIZ = (() => {
+        const questions = [
+          {
+            q: "Model A solves a regression problem and achieves <b>R² = 0.5</b>. Model B solves a binary classification problem and achieves <b>accuracy = 0.5</b>. Which performs better relative to a naive baseline?",
+            opts: [
+              "Model A — it explains 50% of the variance in y; the mean baseline scores 0.",
+              "Model B — 50% is above random.",
+              "Both are equally good; 0.5 is 0.5.",
+              "Neither — both metrics are below their useful range.",
+            ],
+            a: 0,
+            expl: "<b>R² = 0.5</b> means the model explains half the variance (mean baseline = 0). <b>Accuracy = 0.5</b> in a balanced binary problem is pure random guessing. A and B look the same numerically but live in different scales.",
+          },
+          {
+            q: "Which metric penalizes large errors more heavily?",
+            opts: ["MAE", "MSE", "They penalize errors equally", "R²"],
+            a: 1,
+            expl: "MSE squares each residual — a single error of magnitude 4 contributes 16, while MAE contributes 4. That's why RMSE / MSE are <b>more sensitive to outliers</b>.",
+          },
+          {
+            q: "You compute <b>R² = -0.3</b> on a test set. Which statement is correct?",
+            opts: [
+              "Impossible — R² is always between 0 and 1.",
+              "The model is <i>worse</i> than predicting the mean of y.",
+              "The model explains 30% of the variance.",
+              "The data has a negative correlation.",
+            ],
+            a: 1,
+            expl: "R² compares the model against the mean baseline. Negative R² means <b>predicting ȳ for every sample would do better</b>. It's rare but possible, especially on out-of-distribution test sets.",
+          },
+          {
+            q: "A cancer screening model is used to decide who gets a follow-up biopsy. Which metric should you prioritize?",
+            opts: ["Precision — avoid unnecessary biopsies.", "Recall — don't miss real cases.", "Accuracy — overall correctness.", "Training speed."],
+            a: 1,
+            expl: "Missing a true cancer case (FN) is catastrophic; an extra biopsy (FP) is inconvenient but survivable. Optimize for <b>Recall</b> (also called sensitivity).",
+          },
+          {
+            q: "A spam filter. Users are outraged when real mail ends up in the spam folder but don't mind a little junk in the inbox. Optimize for:",
+            opts: ["Precision", "Recall", "Accuracy", "F1"],
+            a: 0,
+            expl: "A real email landing in spam = <b>FP</b> (predicted spam, actually ham). High <b>Precision</b> means \"when I say spam, I'm usually right\" — exactly what protects the inbox.",
+          },
+          {
+            q: "99% of loan applications do not default. A model predicts \"no default\" for every application. What's its accuracy?",
+            opts: ["≈ 50%", "≈ 99%", "Undefined", "0%"],
+            a: 1,
+            expl: "It gets every negative right and every (rare) positive wrong: accuracy ≈ <b>99%</b>. High accuracy, zero recall — the classic <b>imbalanced-data trap</b>. F1 or recall reveal the problem.",
+          },
+          {
+            q: "MAE corresponds to which distance function between y and ŷ?",
+            opts: ["Euclidean (L²)", "Manhattan (L¹)", "Chebyshev (L∞)", "Cosine"],
+            a: 1,
+            expl: "MAE = (1/n) · Σ |yᵢ − ŷᵢ| = (1/n) · <b>L¹(y, ŷ)</b>. Summing absolute component-wise differences is exactly the <b>Manhattan / taxicab</b> distance.",
+          },
+          {
+            q: "RMSE is proportional to which distance?",
+            opts: ["Euclidean (L²)", "Manhattan (L¹)", "Chebyshev (L∞)", "Hamming"],
+            a: 0,
+            expl: "RMSE = √((1/n) Σ (yᵢ − ŷᵢ)²) = <b>L²(y, ŷ) / √n</b>. It's the Euclidean distance between the two vectors, normalized by √n.",
+          },
+          {
+            q: "F1 score is the _____ of precision and recall.",
+            opts: ["Arithmetic mean", "Geometric mean", "Harmonic mean", "Maximum"],
+            a: 2,
+            expl: "F1 = 2 · (P · R)/(P + R), which is the <b>harmonic mean</b>. The harmonic mean punishes imbalance: if either P or R is near 0, F1 crashes to 0.",
+          },
+          {
+            q: "A model has TP = 40, FP = 10, FN = 20, TN = 30. What is the precision?",
+            opts: ["40/50 = 0.80", "40/60 ≈ 0.67", "40/100 = 0.40", "70/100 = 0.70"],
+            a: 0,
+            expl: "Precision = TP / (TP + FP) = 40 / (40 + 10) = <b>0.80</b>. Of every 5 positive predictions, 4 are correct. (Recall here is 40 / (40 + 20) = 0.67.)",
+          },
+        ];
+
+        const container = document.getElementById("quiz-container");
+        const progress = document.getElementById("quiz-progress");
+        const answers = new Array(questions.length).fill(-1);
+        let graded = false;
+
+        function render() {
+          container.innerHTML = questions.map((q, qi) => `
+            <div class="q" data-qi="${qi}">
+              <span class="num">${String(qi + 1).padStart(2, "0")}</span>
+              <div class="prompt">${q.q}</div>
+              <div class="opts">
+                ${q.opts.map((o, oi) => `
+                  <button class="opt" data-oi="${oi}">
+                    <span class="key">${String.fromCharCode(65 + oi)}</span>
+                    <span class="text">${o}</span>
+                  </button>
+                `).join("")}
+              </div>
+              <div class="expl">${q.expl}</div>
+            </div>
+          `).join("");
+          bind();
+          updateProgress();
+        }
+
+        function bind() {
+          container.querySelectorAll(".q").forEach((qEl) => {
+            const qi = +qEl.dataset.qi;
+            qEl.querySelectorAll(".opt").forEach((o) => {
+              o.addEventListener("click", () => {
+                if (graded) return;
+                const oi = +o.dataset.oi;
+                answers[qi] = oi;
+                qEl.querySelectorAll(".opt").forEach((x) => x.classList.remove("selected"));
+                o.classList.add("selected");
+                updateProgress();
+              });
+            });
+          });
+        }
+
+        function updateProgress() {
+          const answered = answers.filter((a) => a >= 0).length;
+          progress.textContent = `${answered} / ${questions.length} ANSWERED`;
+        }
+
+        function grade() {
+          graded = true;
+          let correct = 0;
+          container.querySelectorAll(".q").forEach((qEl) => {
+            const qi = +qEl.dataset.qi;
+            const q = questions[qi];
+            const pick = answers[qi];
+            qEl.classList.add("graded");
+            qEl.querySelectorAll(".opt").forEach((o) => {
+              const oi = +o.dataset.oi;
+              o.classList.remove("selected");
+              if (oi === q.a) o.classList.add("correct");
+              else if (oi === pick) o.classList.add("wrong");
+            });
+            if (pick === q.a) correct++;
+          });
+          const card = document.getElementById("quiz-score");
+          card.classList.add("show");
+          document.getElementById("quiz-score-n").textContent = correct;
+          const pct = correct / questions.length;
+          const label = document.getElementById("quiz-score-label");
+          const grade = document.getElementById("quiz-grade");
+          if (pct === 1) { label.textContent = "PERFECT · YOU SHIP MODELS"; grade.textContent = "A+"; }
+          else if (pct >= 0.8) { label.textContent = "STRONG UNDERSTANDING"; grade.textContent = "A"; }
+          else if (pct >= 0.6) { label.textContent = "SOLID · REVIEW THE MISSES"; grade.textContent = "B"; }
+          else if (pct >= 0.4) { label.textContent = "REVISIT THE SLIDES"; grade.textContent = "C"; }
+          else { label.textContent = "BACK TO WEEK 7"; grade.textContent = "F"; }
+          card.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+
+        function reset() {
+          graded = false;
+          for (let i = 0; i < answers.length; i++) answers[i] = -1;
+          document.getElementById("quiz-score").classList.remove("show");
+          render();
+        }
+
+        document.getElementById("quiz-grade-btn").addEventListener("click", grade);
+        document.getElementById("quiz-reset-btn").addEventListener("click", reset);
+
+        render();
+        return { render, grade, reset };
+      })();
+    </script>
+  </body>
+</html>
